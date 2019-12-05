@@ -2,6 +2,8 @@ import json
 from collections import OrderedDict
 from flask import Flask, request
 import urllib.request
+from functools import reduce
+import operator
 
 from owlready2 import *
 
@@ -12,11 +14,25 @@ EXPERIMENT_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks
 SAMPLE_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/master/json/schema/fairtracks_sample.schema.json'
 TRACK_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/master/json/schema/fairtracks_track.schema.json'
 
-EXPERIMENT_SCHEMA_LABEL = 'experimentSchema'
-SAMPLE_SCHEMA_LABEL = 'sampleSchema'
-TRACK_SCHEMA_LABEL = 'trackSchema'
+TRACKS = 'tracks'
+STUDIES = 'studies'
+EXPERIMENTS = 'experiments'
+SAMPLES = 'samples'
 
-SCHEMAS = {(EXPERIMENT_SCHEMA_LABEL, EXPERIMENT_SCHEMA_URL), (SAMPLE_SCHEMA_LABEL, SAMPLE_SCHEMA_URL), (TRACK_SCHEMA_LABEL, TRACK_SCHEMA_URL)}
+SCHEMAS = {EXPERIMENTS:EXPERIMENT_SCHEMA_URL, SAMPLES:SAMPLE_SCHEMA_URL, TRACKS:TRACK_SCHEMA_URL}
+
+ONTOLOGIES = {}
+itemToOntologyMapping = {}
+termIdPaths = {}
+
+JSON_CATEGORIES = [TRACKS, EXPERIMENTS, STUDIES, SAMPLES]
+
+TERM_ID = 'term_id'
+PROPERTIES = 'properties'
+ONTOLOGY = 'ontology'
+TERM_LABEL = 'term_label'
+
+pathsWithOntologyUrls = defaultdict(list)
 
 
 @app.route('/')
@@ -25,46 +41,114 @@ def index():
 
 
 @app.route('/autogenerate', methods=['POST'])
-def to_gsuite():
+def autogenerate():
+    #data = json.loads(request.data)
+    with open('fairtracks.no-auto.json', 'r') as f:
+        data = json.load(f)
+        autogenerateFields(data)
 
-    data = json.loads(request.data, object_pairs_hook=OrderedDict)
-    for item in data:
-        autogenerateFields(item)
+    return data
+
+def generateTermLabels(data):
+    for category in pathsWithOntologyUrls.keys():
+        print(category)
+        for item in data[category]:
+            for path, ontologyUrls in pathsWithOntologyUrls[category]:
+                print(path)
+                try:
+                    termIdVal = getFromDict(item, path)
+                except KeyError:
+                    continue
+
+                print(termIdVal)
+                termLabelVal = ''
+                for url in ontologyUrls:
+                    ontology = ONTOLOGIES[url]
+                    termLabelVal = ontology.search(iri=termIdVal)[0].label[0]
+                    if termLabelVal:
+                        break
+
+                print(termLabelVal)
+                setInDict(item, path[:-1] + [TERM_LABEL], termLabelVal)
 
     return data
 
 
+def getFromDict(dataDict, pathList):
+    for k in pathList:
+        dataDict = dataDict[k]
+    return dataDict
+
+
+def setInDict(dataDict, pathList, value):
+    getFromDict(dataDict, pathList[:-1])[pathList[-1]] = value
+
+
 def autogenerateFields(data):
-    print(data)
-    # if 'tracks' not in data:
-    #     return
-    #
-    # trackData = OrderedDict()
-    # for path, value in dictPaths(data['tracks']):
-    #     trackData[path] = value
-    #
-    # dataWithoutTracks = data.copy()
-    # dataWithoutTracks.pop('tracks')
-    #
-    # noTrackData = OrderedDict()
-    # for path, value in dictPaths(dataWithoutTracks):
-    #     noTrackData[path] = value
-    #
-    # # # order the columns as in input json with track attributes first
-    # resultOrdered = OrderedDict()
-    # for col in trackData:
-    #     if trackData[col]:
-    #         resultOrdered[col] = trackData[col]
-    #
-    # for col in noTrackData:
-    #     if noTrackData[col]:
-    #         resultOrdered[col] = noTrackData[col]
-    #
-    # uri = resultOrdered.pop(URL_PATH, None)
-    # if not uri:
-    #     return
-    # gsuite.addTrack(GSuiteTrack(uri=uri, attributes=resultOrdered, title=resultOrdered[TITLE_PATH],
-    #                             genome=resultOrdered[GENOME_PATH]))
+    data = generateTermLabels(data)
+    print(json.dumps(data))
+
+
+def getPathsToElement(data, key, path=[]):
+    if isinstance(data, dict):
+        for k,v in data.items():
+            newPath = path + [k]
+            if k == key:
+                #print(' ' + k + ' ' + str(path))
+                yield newPath
+            else:
+                for el in getPathsToElement(v, key, newPath):
+                    yield el
+    elif isinstance(data, list):
+        for i in data:
+            for el in getPathsToElement(i, key, path):
+                yield el
+
+
+def getPathsToElementInSchema(data, key):
+    pathsWithOntologyUrls = []
+
+    for path in getPathsToElement(data, key):
+        ontologyUrls = []
+        el = getFromDict(data, path)
+        if ONTOLOGY in el:
+            ontologyUrls = el[ONTOLOGY]
+            if not isinstance(ontologyUrls, list):
+                ontologyUrls = [ontologyUrls]
+        newPath = [p for p in path if p != PROPERTIES]
+        if ontologyUrls:
+            pathsWithOntologyUrls.append((newPath, ontologyUrls))
+
+    return pathsWithOntologyUrls
+
+def downloadOntologyFiles(ontologyUrls):
+    for url in ontologyUrls:
+        fn = url.rsplit('/', 1)[-1]
+        if not os.path.exists(fn):
+            ontoFile, _ = urllib.request.urlretrieve(url, fn)
+
+        ontology = owlready2.get_ontology(fn)
+        ontology.load()
+        print('loaded: ' + url)
+        ONTOLOGIES[url] = ontology
+
+
+def initOntologies():
+    ontologyUrls = set()
+
+    for category, url in SCHEMAS.items():
+        schemaFn, _ = urllib.request.urlretrieve(url, category + '.json')
+
+        with open(schemaFn, 'r') as schemaFile:
+            schemaJson = json.load(schemaFile)
+            pathsWithOntologyUrls[category].extend(getPathsToElementInSchema(schemaJson[PROPERTIES], TERM_ID))
+
+        for path, ontoUrls in pathsWithOntologyUrls[category]:
+            for ontoUrl in ontoUrls:
+                ontologyUrls.add(ontoUrl)
+
+    print(pathsWithOntologyUrls)
+    downloadOntologyFiles(ontologyUrls)
 
 
 def dictPaths(myDict, path=[]):
@@ -85,36 +169,10 @@ def dictPaths(myDict, path=[]):
     #                 yield SEP.join(newPath), str(v)
 
 
-def initOntologies():
-    experimentSchemaFn, _ = urllib.request.urlretrieve(EXPERIMENT_SCHEMA_URL, 'experiment_schema.json')
-    sampleSchemaFn, _ = urllib.request.urlretrieve(SAMPLE_SCHEMA_URL, 'sample_schema.json')
-    trackSchemaFn, _ = urllib.request.urlretrieve(TRACK_SCHEMA_URL, 'track_schema.json')
-
-    ontologies = {}
-    for name, url in SCHEMAS:
-        schemaFn, _ = urllib.request.urlretrieve(url, name + '.json')
-        ontologies[name] = {}
-
-        with open(schemaFn, 'r') as schemaFile:
-            schema = json.load(schemaFile)
-            for key, item in schema['properties'].items():
-                if 'properties' in item:
-                    if 'term_id' in item['properties']:
-                        if 'ontology' in item['properties']['term_id']:
-                            val = item['properties']['term_id']['ontology']
-                            if type(val) == list:
-                                ontologies[name][key] = val
-                            else:
-                                ontologies[name][key] = [val]
-
-    print(ontologies)
-
-
-    pass
-
 
 if __name__ == '__main__':
     initOntologies()
+    autogenerate()
     #app.run(host='0.0.0.0')
 
 
