@@ -1,18 +1,14 @@
 import json
-from collections import OrderedDict
-from flask import Flask, request
 import urllib.request
-from functools import reduce
-import operator
 
+from flask import Flask
 from owlready2 import *
-
 
 app = Flask(__name__)
 
-EXPERIMENT_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/master/json/schema/fairtracks_experiment.schema.json'
-SAMPLE_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/master/json/schema/fairtracks_sample.schema.json'
-TRACK_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/master/json/schema/fairtracks_track.schema.json'
+EXPERIMENT_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/current_test/json/schema/fairtracks_experiment.schema.json'
+SAMPLE_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/current_test/json/schema/fairtracks_sample.schema.json'
+TRACK_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/current_test/json/schema/fairtracks_track.schema.json'
 
 TRACKS = 'tracks'
 STUDIES = 'studies'
@@ -31,6 +27,12 @@ TERM_ID = 'term_id'
 PROPERTIES = 'properties'
 ONTOLOGY = 'ontology'
 TERM_LABEL = 'term_label'
+DOC_INFO = 'doc_info'
+DOC_ONTOLOGY_VERSIONS = 'doc_ontology_versions'
+FILE_NAME = 'file_name'
+FILE_URL = 'file_url'
+fileUrlPath = []
+
 
 pathsWithOntologyUrls = defaultdict(list)
 
@@ -48,6 +50,21 @@ def autogenerate():
         autogenerateFields(data)
 
     return data
+
+
+def addOntologyVersions(data):
+    if DOC_INFO in data:
+        docInfo = data[DOC_INFO]
+        if not DOC_ONTOLOGY_VERSIONS in docInfo:
+            docInfo[DOC_ONTOLOGY_VERSIONS] = {}
+
+        docOntologyVersions = docInfo[DOC_ONTOLOGY_VERSIONS]
+
+        for url, ontology in ONTOLOGIES.items():
+            pass
+
+    return data
+
 
 def generateTermLabels(data):
     for category in pathsWithOntologyUrls.keys():
@@ -73,6 +90,15 @@ def generateTermLabels(data):
 
     return data
 
+def addFileName(data):
+    tracks = data[TRACKS]
+    for track in tracks:
+        fileUrl = getFromDict(track, fileUrlPath)
+        fileName = fileUrl.rsplit('/', 1)[-1]
+        setInDict(track, fileUrlPath[:-1] + [FILE_NAME], fileName)
+
+    return data
+
 
 def getFromDict(dataDict, pathList):
     for k in pathList:
@@ -86,6 +112,8 @@ def setInDict(dataDict, pathList, value):
 
 def autogenerateFields(data):
     data = generateTermLabels(data)
+    data = addOntologyVersions(data)
+    data = addFileName(data)
     print(json.dumps(data))
 
 
@@ -94,7 +122,6 @@ def getPathsToElement(data, key, path=[]):
         for k,v in data.items():
             newPath = path + [k]
             if k == key:
-                #print(' ' + k + ' ' + str(path))
                 yield newPath
             else:
                 for el in getPathsToElement(v, key, newPath):
@@ -123,6 +150,7 @@ def getPathsToElementInSchema(data, key):
 
 def downloadOntologyFiles(ontologyUrls):
     for url in ontologyUrls:
+        print('loading ' + str(url))
         fn = url.rsplit('/', 1)[-1]
         if not os.path.exists(fn):
             ontoFile, _ = urllib.request.urlretrieve(url, fn)
@@ -142,6 +170,14 @@ def initOntologies():
         with open(schemaFn, 'r') as schemaFile:
             schemaJson = json.load(schemaFile)
             pathsWithOntologyUrls[category].extend(getPathsToElementInSchema(schemaJson[PROPERTIES], TERM_ID))
+
+            if category == TRACKS:
+                for path in getPathsToElement(schemaJson[PROPERTIES], FILE_URL):
+                    fileUrlPath.extend(path)
+                    break
+                if PROPERTIES in fileUrlPath:
+                    fileUrlPath.remove(PROPERTIES)
+                print(fileUrlPath)
 
         for path, ontoUrls in pathsWithOntologyUrls[category]:
             for ontoUrl in ontoUrls:
