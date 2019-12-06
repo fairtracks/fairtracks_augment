@@ -37,6 +37,13 @@ VERSION_IRI = '<owl:versionIRI rdf:resource="'
 DOAP_VERSION = '<doap:Version>'
 EDAM_ONTOLOGY = 'http://edamontology.org/'
 
+SAMPLE_TYPE_MAPPING = {'http://purl.obolibrary.org/obo/NCIT_C12508':['sample_type', 'cell_type'],
+                       'http://purl.obolibrary.org/obo/NCIT_C12913':['sample_type', 'abnormal_cell_type'],
+                       'http://purl.obolibrary.org/obo/NCIT_C16403':['sample_type', 'cell_line'],
+                       'http://purl.obolibrary.org/obo/NCIT_C103199':['sample_type', 'organism_part']}
+
+BIOSPECIMEN_CLASS_PATH = ['biospecimen_class', 'term_id']
+SAMPLE_TYPE_SUMMARY_PATH = ['sample_type', 'summary']
 
 pathsWithOntologyUrls = defaultdict(list)
 
@@ -120,6 +127,18 @@ def generateTermLabels(data):
     return data
 
 
+def addSampleSummary(data):
+    samples = data[SAMPLES]
+    for sample in samples:
+        biospecimenTermId = getFromDict(sample, BIOSPECIMEN_CLASS_PATH)
+        sampleTypeVal = getFromDict(sample, SAMPLE_TYPE_MAPPING[biospecimenTermId])
+        if TERM_LABEL in sampleTypeVal:
+            print('setting summary to: ' + sampleTypeVal[TERM_LABEL])
+            setInDict(sample, SAMPLE_TYPE_SUMMARY_PATH, sampleTypeVal[TERM_LABEL])
+
+    return data
+
+
 def addFileName(data):
     tracks = data[TRACKS]
     for track in tracks:
@@ -144,6 +163,7 @@ def autogenerateFields(data):
     data = generateTermLabels(data)
     data = addOntologyVersions(data)
     data = addFileName(data)
+    data = addSampleSummary(data)
     print(json.dumps(data))
 
 
@@ -177,6 +197,7 @@ def getPathsToElementInSchema(data, key):
             pathsWithOntologyUrls.append((newPath, ontologyUrls))
 
     return pathsWithOntologyUrls
+
 
 def downloadOntologyFiles(ontologyUrls):
     for url in ontologyUrls:
