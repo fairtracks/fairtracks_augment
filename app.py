@@ -4,6 +4,7 @@ import urllib.request
 from flask import Flask
 from owlready2 import *
 
+
 app = Flask(__name__)
 
 EXPERIMENT_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/current_test/json/schema/fairtracks_experiment.schema.json'
@@ -32,6 +33,9 @@ DOC_ONTOLOGY_VERSIONS = 'doc_ontology_versions'
 FILE_NAME = 'file_name'
 FILE_URL = 'file_url'
 fileUrlPath = []
+VERSION_IRI = '<owl:versionIRI rdf:resource="'
+DOAP_VERSION = '<doap:Version>'
+EDAM_ONTOLOGY = 'http://edamontology.org/'
 
 
 pathsWithOntologyUrls = defaultdict(list)
@@ -55,13 +59,38 @@ def autogenerate():
 def addOntologyVersions(data):
     if DOC_INFO in data:
         docInfo = data[DOC_INFO]
-        if not DOC_ONTOLOGY_VERSIONS in docInfo:
+        if DOC_ONTOLOGY_VERSIONS not in docInfo:
             docInfo[DOC_ONTOLOGY_VERSIONS] = {}
 
         docOntologyVersions = docInfo[DOC_ONTOLOGY_VERSIONS]
+        docUrls = docOntologyVersions.keys()
+        print(docUrls)
 
+        urlAndVersions = []
         for url, ontology in ONTOLOGIES.items():
-            pass
+            if url in docUrls:
+                print('skipping url: ' + url)
+                continue
+            fn = getOntologyFilenameFromUrl(url)
+            edam = False
+            if EDAM_ONTOLOGY in url:
+                edam = True
+            with open(fn, 'r') as ontoFile:
+                for line in ontoFile:
+                    if edam:
+                        if DOAP_VERSION in line:
+                            versionNumber = line.split(DOAP_VERSION)[1].split('<')[0]
+                            versionIri = EDAM_ONTOLOGY + 'EDAM_' + versionNumber + '.owl'
+                            urlAndVersions.append((url, versionIri))
+                            break
+                    else:
+                        if VERSION_IRI in line:
+                            versionIri = line.split(VERSION_IRI)[1].split('"')[0]
+                            urlAndVersions.append((url, versionIri))
+                            break
+
+        for url, versionIri in urlAndVersions:
+            docOntologyVersions[url] = versionIri
 
     return data
 
@@ -89,6 +118,7 @@ def generateTermLabels(data):
                 setInDict(item, path[:-1] + [TERM_LABEL], termLabelVal)
 
     return data
+
 
 def addFileName(data):
     tracks = data[TRACKS]
@@ -151,7 +181,7 @@ def getPathsToElementInSchema(data, key):
 def downloadOntologyFiles(ontologyUrls):
     for url in ontologyUrls:
         print('loading ' + str(url))
-        fn = url.rsplit('/', 1)[-1]
+        fn = getOntologyFilenameFromUrl(url)
         if not os.path.exists(fn):
             ontoFile, _ = urllib.request.urlretrieve(url, fn)
 
@@ -185,6 +215,12 @@ def initOntologies():
 
     print(pathsWithOntologyUrls)
     downloadOntologyFiles(ontologyUrls)
+
+
+def getOntologyFilenameFromUrl(url):
+    fn = url.rsplit('/', 1)[-1]
+
+    return fn
 
 
 def dictPaths(myDict, path=[]):
