@@ -1,58 +1,18 @@
 import json
-import urllib.request
 
 from flask import Flask
-from owlready2 import *
 
+from AppData import AppData
+from CommonFunctions import setInDict, getFilenameFromUrl, getFromDict
+from Constants import TRACKS, \
+    EXPERIMENTS, SAMPLES, TERM_LABEL, DOC_INFO, \
+    DOC_ONTOLOGY_VERSIONS, FILE_NAME, VERSION_IRI, DOAP_VERSION, EDAM_ONTOLOGY, \
+    SAMPLE_TYPE_MAPPING, BIOSPECIMEN_CLASS_PATH, SAMPLE_TYPE_SUMMARY_PATH, EXPERIMENT_TARGET_PATHS, \
+    TARGET_DETAILS_PATH, TARGET_SUMMARY_PATH, TRACK_FILE_URL_PATH
 
 app = Flask(__name__)
 
-EXPERIMENT_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/current_test/json/schema/fairtracks_experiment.schema.json'
-SAMPLE_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/current_test/json/schema/fairtracks_sample.schema.json'
-TRACK_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/current_test/json/schema/fairtracks_track.schema.json'
-
-TRACKS = 'tracks'
-STUDIES = 'studies'
-EXPERIMENTS = 'experiments'
-SAMPLES = 'samples'
-
-SCHEMAS = {EXPERIMENTS:EXPERIMENT_SCHEMA_URL, SAMPLES:SAMPLE_SCHEMA_URL, TRACKS:TRACK_SCHEMA_URL}
-
-ONTOLOGIES = {}
-itemToOntologyMapping = {}
-termIdPaths = {}
-
-JSON_CATEGORIES = [TRACKS, EXPERIMENTS, STUDIES, SAMPLES]
-
-TERM_ID = 'term_id'
-PROPERTIES = 'properties'
-ONTOLOGY = 'ontology'
-TERM_LABEL = 'term_label'
-DOC_INFO = 'doc_info'
-DOC_ONTOLOGY_VERSIONS = 'doc_ontology_versions'
-FILE_NAME = 'file_name'
-FILE_URL = 'file_url'
-fileUrlPath = []
-VERSION_IRI = '<owl:versionIRI rdf:resource="'
-DOAP_VERSION = '<doap:Version>'
-EDAM_ONTOLOGY = 'http://edamontology.org/'
-
-SAMPLE_TYPE_MAPPING = {'http://purl.obolibrary.org/obo/NCIT_C12508':['sample_type', 'cell_type'],
-                       'http://purl.obolibrary.org/obo/NCIT_C12913':['sample_type', 'abnormal_cell_type'],
-                       'http://purl.obolibrary.org/obo/NCIT_C16403':['sample_type', 'cell_line'],
-                       'http://purl.obolibrary.org/obo/NCIT_C103199':['sample_type', 'organism_part']}
-
-BIOSPECIMEN_CLASS_PATH = ['biospecimen_class', 'term_id']
-SAMPLE_TYPE_SUMMARY_PATH = ['sample_type', 'summary']
-
-EXPERIMENT_TARGET_PATHS = [['target', 'sequence_feature', 'term_label'], ['target', 'gene_id'],
-                           ['target', 'gene_product_type', 'term_label'], ['target', 'macromolecular_structure', 'term_label'],
-                           ['target', 'phenotype', 'term_label']]
-
-TARGET_DETAILS_PATH = ['target', 'target_details']
-TARGET_SUMMARY_PATH = ['target', 'summary']
-
-pathsWithOntologyUrls = defaultdict(list)
+appData = AppData()
 
 
 @app.route('/')
@@ -81,11 +41,11 @@ def addOntologyVersions(data):
         print(docUrls)
 
         urlAndVersions = []
-        for url, ontology in ONTOLOGIES.items():
+        for url, ontology in appData.getOntologies().items():
             if url in docUrls:
                 print('skipping url: ' + url)
                 continue
-            fn = getOntologyFilenameFromUrl(url)
+            fn = getFilenameFromUrl(url)
             edam = False
             if EDAM_ONTOLOGY in url:
                 edam = True
@@ -110,10 +70,10 @@ def addOntologyVersions(data):
 
 
 def generateTermLabels(data):
-    for category in pathsWithOntologyUrls.keys():
+    for category, paths in appData.getPathsWithOntologyUrls().items():
         print(category)
         for item in data[category]:
-            for path, ontologyUrls in pathsWithOntologyUrls[category]:
+            for path, ontologyUrls in paths:
                 print(path)
                 try:
                     termIdVal = getFromDict(item, path)
@@ -123,7 +83,7 @@ def generateTermLabels(data):
                 print(termIdVal)
                 termLabelVal = ''
                 for url in ontologyUrls:
-                    ontology = ONTOLOGIES[url]
+                    ontology = appData.getOntologies()[url]
                     termLabelVal = ontology.search(iri=termIdVal)[0].label[0]
                     if termLabelVal:
                         break
@@ -173,21 +133,11 @@ def addTargetSummary(data):
 def addFileName(data):
     tracks = data[TRACKS]
     for track in tracks:
-        fileUrl = getFromDict(track, fileUrlPath)
-        fileName = fileUrl.rsplit('/', 1)[-1]
-        setInDict(track, fileUrlPath[:-1] + [FILE_NAME], fileName)
+        fileUrl = getFromDict(track, TRACK_FILE_URL_PATH)
+        fileName = getFilenameFromUrl(fileUrl)
+        setInDict(track, TRACK_FILE_URL_PATH[:-1] + [FILE_NAME], fileName)
 
     return data
-
-
-def getFromDict(dataDict, pathList):
-    for k in pathList:
-        dataDict = dataDict[k]
-    return dataDict
-
-
-def setInDict(dataDict, pathList, value):
-    getFromDict(dataDict, pathList[:-1])[pathList[-1]] = value
 
 
 def autogenerateFields(data):
@@ -199,104 +149,8 @@ def autogenerateFields(data):
     print(json.dumps(data))
 
 
-def getPathsToElement(data, key, path=[]):
-    if isinstance(data, dict):
-        for k,v in data.items():
-            newPath = path + [k]
-            if k == key:
-                yield newPath
-            else:
-                for el in getPathsToElement(v, key, newPath):
-                    yield el
-    elif isinstance(data, list):
-        for i in data:
-            for el in getPathsToElement(i, key, path):
-                yield el
-
-
-def getPathsToElementInSchema(data, key):
-    pathsWithOntologyUrls = []
-
-    for path in getPathsToElement(data, key):
-        ontologyUrls = []
-        el = getFromDict(data, path)
-        if ONTOLOGY in el:
-            ontologyUrls = el[ONTOLOGY]
-            if not isinstance(ontologyUrls, list):
-                ontologyUrls = [ontologyUrls]
-        newPath = [p for p in path if p != PROPERTIES]
-        if ontologyUrls:
-            pathsWithOntologyUrls.append((newPath, ontologyUrls))
-
-    return pathsWithOntologyUrls
-
-
-def downloadOntologyFiles(ontologyUrls):
-    for url in ontologyUrls:
-        print('loading ' + str(url))
-        fn = getOntologyFilenameFromUrl(url)
-        if not os.path.exists(fn):
-            ontoFile, _ = urllib.request.urlretrieve(url, fn)
-
-        ontology = owlready2.get_ontology(fn)
-        ontology.load()
-        print('loaded: ' + url)
-        ONTOLOGIES[url] = ontology
-
-
-def initOntologies():
-    ontologyUrls = set()
-
-    for category, url in SCHEMAS.items():
-        schemaFn, _ = urllib.request.urlretrieve(url, category + '.json')
-
-        with open(schemaFn, 'r') as schemaFile:
-            schemaJson = json.load(schemaFile)
-            pathsWithOntologyUrls[category].extend(getPathsToElementInSchema(schemaJson[PROPERTIES], TERM_ID))
-
-            if category == TRACKS:
-                for path in getPathsToElement(schemaJson[PROPERTIES], FILE_URL):
-                    fileUrlPath.extend(path)
-                    break
-                if PROPERTIES in fileUrlPath:
-                    fileUrlPath.remove(PROPERTIES)
-                print(fileUrlPath)
-
-        for path, ontoUrls in pathsWithOntologyUrls[category]:
-            for ontoUrl in ontoUrls:
-                ontologyUrls.add(ontoUrl)
-
-    print(pathsWithOntologyUrls)
-    downloadOntologyFiles(ontologyUrls)
-
-
-def getOntologyFilenameFromUrl(url):
-    fn = url.rsplit('/', 1)[-1]
-
-    return fn
-
-
-def dictPaths(myDict, path=[]):
-    pass
-    # for k,v in myDict.iteritems():
-    #     newPath = path + [k]
-    #     if isinstance(v, dict):
-    #         for item in dictPaths(v, newPath):
-    #             yield item
-    #     else:
-    #         # track attributes should not have 'tracks->' in the attribute name
-    #         if newPath[0] == 'tracks':
-    #             yield SEP.join(newPath[1:]), str(v)
-    #         else:
-    #             if isinstance(v, list):
-    #                 yield SEP.join(newPath), ARRAY_SEP.join(v)
-    #             else:
-    #                 yield SEP.join(newPath), str(v)
-
-
-
 if __name__ == '__main__':
-    initOntologies()
+    appData.initApp()
     autogenerate()
     #app.run(host='0.0.0.0')
 
