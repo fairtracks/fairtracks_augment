@@ -38,3 +38,7 @@ EXPERIMENT_TARGET_PATHS = [['target', 'sequence_feature', 'term_label'], ['targe
 TARGET_DETAILS_PATH = ['target', 'target_details']
 TARGET_SUMMARY_PATH = ['target', 'summary']
 TRACK_FILE_URL_PATH = ['file_url']
+
+SCHEMA_FOLDER_PATH = 'schema'
+
+ONTOLOGY_FOLDER_PATH = 'ontologies'

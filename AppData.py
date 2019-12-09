@@ -2,11 +2,13 @@ import json
 import os
 import urllib.request
 from collections import defaultdict
+from os.path import dirname
 
 import owlready2
 
 from CommonFunctions import getFromDict, getPathsToElement, getFilenameFromUrl
-from Constants import ONTOLOGY, PROPERTIES, SCHEMAS, TERM_ID
+from Constants import ONTOLOGY, PROPERTIES, SCHEMAS, TERM_ID, SCHEMA_FOLDER_PATH, \
+    ONTOLOGY_FOLDER_PATH
 
 
 class AppData():
@@ -29,7 +31,7 @@ class AppData():
 
     def initApp(self):
         for category, url in SCHEMAS.items():
-            schemaFn, _ = urllib.request.urlretrieve(url, category + '.json')
+            schemaFn, _ = urllib.request.urlretrieve(url, self._getSchemaFilePath(category))
 
             with open(schemaFn, 'r') as schemaFile:
                 schemaJson = json.load(schemaFile)
@@ -51,11 +53,11 @@ class AppData():
 
         for url in ontologyUrls:
             print('loading ' + str(url))
-            fn = getFilenameFromUrl(url)
-            if not os.path.exists(fn):
-                ontoFile, _ = urllib.request.urlretrieve(url, fn)
+            path = self._getOntologyFilePath(url)
+            if not os.path.exists(path):
+                ontoFile, _ = urllib.request.urlretrieve(url, path)
 
-            ontology = owlready2.get_ontology(fn)
+            ontology = owlready2.get_ontology(path)
             ontology.load()
             print('loaded: ' + url)
             self._ontologies[url] = ontology
@@ -76,6 +78,19 @@ class AppData():
 
         return pathsAndUrls
 
+    def _getSchemaFilePath(self, category):
+        path = os.path.join(SCHEMA_FOLDER_PATH, category + '.json')
+        if not os.path.exists(dirname(path)):
+            os.makedirs(os.path.dirname(path))
+
+        return path
+
+    def _getOntologyFilePath(self, url):
+        path = os.path.join(ONTOLOGY_FOLDER_PATH, getFilenameFromUrl(url))
+        if not os.path.exists(dirname(path)):
+            os.makedirs(os.path.dirname(path))
+
+        return path
 
 
 
