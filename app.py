@@ -45,6 +45,13 @@ SAMPLE_TYPE_MAPPING = {'http://purl.obolibrary.org/obo/NCIT_C12508':['sample_typ
 BIOSPECIMEN_CLASS_PATH = ['biospecimen_class', 'term_id']
 SAMPLE_TYPE_SUMMARY_PATH = ['sample_type', 'summary']
 
+EXPERIMENT_TARGET_PATHS = [['target', 'sequence_feature', 'term_label'], ['target', 'gene_id'],
+                           ['target', 'gene_product_type', 'term_label'], ['target', 'macromolecular_structure', 'term_label'],
+                           ['target', 'phenotype', 'term_label']]
+
+TARGET_DETAILS_PATH = ['target', 'target_details']
+TARGET_SUMMARY_PATH = ['target', 'summary']
+
 pathsWithOntologyUrls = defaultdict(list)
 
 
@@ -133,10 +140,34 @@ def addSampleSummary(data):
         biospecimenTermId = getFromDict(sample, BIOSPECIMEN_CLASS_PATH)
         sampleTypeVal = getFromDict(sample, SAMPLE_TYPE_MAPPING[biospecimenTermId])
         if TERM_LABEL in sampleTypeVal:
-            print('setting summary to: ' + sampleTypeVal[TERM_LABEL])
+            print('setting sample summary to: ' + sampleTypeVal[TERM_LABEL])
             setInDict(sample, SAMPLE_TYPE_SUMMARY_PATH, sampleTypeVal[TERM_LABEL])
 
     return data
+
+
+def addTargetSummary(data):
+    experiments = data[EXPERIMENTS]
+    val = ''
+    for exp in experiments:
+        for path in EXPERIMENT_TARGET_PATHS:
+            try:
+                val = getFromDict(exp, path)
+                break
+            except KeyError:
+                continue
+
+        if val:
+            details = ''
+            try:
+                details = getFromDict(exp, TARGET_DETAILS_PATH)
+            except KeyError:
+                pass
+
+            if details:
+                val += ' (' + details + ')'
+            print('setting experiment summary to: ' + val)
+            setInDict(exp, TARGET_SUMMARY_PATH, val)
 
 
 def addFileName(data):
@@ -160,10 +191,11 @@ def setInDict(dataDict, pathList, value):
 
 
 def autogenerateFields(data):
-    data = generateTermLabels(data)
-    data = addOntologyVersions(data)
-    data = addFileName(data)
-    data = addSampleSummary(data)
+    generateTermLabels(data)
+    addOntologyVersions(data)
+    addFileName(data)
+    addSampleSummary(data)
+    addTargetSummary(data)
     print(json.dumps(data))
 
 
