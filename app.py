@@ -1,9 +1,10 @@
 import json
 
-from flask import Flask, request
+from flask import Flask, jsonify, make_response, abort, request
 
 from AppData import AppData
-from CommonFunctions import setInDict, getFilenameFromUrl, getFromDict
+from CommonFunctions import setInDict, getFilenameFromUrl, getFromDict, makeStrPathFromList, \
+    getOntologyFilePath
 from Constants import TRACKS, \
     EXPERIMENTS, SAMPLES, TERM_LABEL, DOC_INFO, \
     DOC_ONTOLOGY_VERSIONS, FILE_NAME, VERSION_IRI, DOAP_VERSION, EDAM_ONTOLOGY, \
@@ -20,12 +21,15 @@ def index():
     return 'OK'
 
 
+@app.errorhandler(400)
+def custom400(error):
+    response = jsonify({'message': error.description})
+    return make_response(response, 400)
+
+
 @app.route('/autogenerate', methods=['POST'])
 def autogenerate():
     data = json.loads(request.data)
-    # with open('fairtracks.no-auto.json', 'r') as f:
-    #     data = json.load(f)
-    #     autogenerateFields(data)
     autogenerateFields(data)
 
     return data
@@ -39,14 +43,12 @@ def addOntologyVersions(data):
 
         docOntologyVersions = docInfo[DOC_ONTOLOGY_VERSIONS]
         docUrls = docOntologyVersions.keys()
-        #print(docUrls)
 
         urlAndVersions = []
         for url, ontology in appData.getOntologies().items():
             if url in docUrls:
-                #print('skipping url: ' + url)
                 continue
-            fn = getFilenameFromUrl(url)
+            fn = getOntologyFilePath(url)
             edam = False
             if EDAM_ONTOLOGY in url:
                 edam = True
@@ -67,21 +69,16 @@ def addOntologyVersions(data):
         for url, versionIri in urlAndVersions:
             docOntologyVersions[url] = versionIri
 
-    return data
-
 
 def generateTermLabels(data):
     for category, paths in appData.getPathsWithOntologyUrls().items():
-        #print(category)
         for item in data[category]:
             for path, ontologyUrls in paths:
-                #print(path)
                 try:
                     termIdVal = getFromDict(item, path)
                 except KeyError:
                     continue
 
-                #print(termIdVal)
                 termLabelVal = ''
                 for url in ontologyUrls:
                     ontology = appData.getOntologies()[url]
@@ -91,13 +88,11 @@ def generateTermLabels(data):
                     if termLabelVal:
                         break
 
-                #print(termLabelVal)
                 if termLabelVal:
                     setInDict(item, path[:-1] + [TERM_LABEL], termLabelVal)
                 else:
-                    print('------ no term_label found for: ' + str(path) + ' : ' + termIdVal)
-
-    return data
+                    abort(400, 'Item ' + termIdVal + ' not found in ontologies ' + str(ontologyUrls)
+                          + ' (path in json: ' + makeStrPathFromList(path, category) + ')')
 
 
 def addSampleSummary(data):
@@ -107,12 +102,9 @@ def addSampleSummary(data):
         if biospecimenTermId in SAMPLE_TYPE_MAPPING:
             sampleTypeVal = getFromDict(sample, SAMPLE_TYPE_MAPPING[biospecimenTermId])
             if TERM_LABEL in sampleTypeVal:
-                #print('setting sample summary to: ' + sampleTypeVal[TERM_LABEL])
                 setInDict(sample, SAMPLE_TYPE_SUMMARY_PATH, sampleTypeVal[TERM_LABEL])
         else:
-            print('------ unexpected biospecimen_class term_id: ' + biospecimenTermId)
-
-    return data
+            abort(400, 'Unexpected biospecimen_class term_id: ' + biospecimenTermId)
 
 
 def addTargetSummary(data):
@@ -135,7 +127,6 @@ def addTargetSummary(data):
 
             if details:
                 val += ' (' + details + ')'
-            #print('setting experiment summary to: ' + val)
             setInDict(exp, TARGET_SUMMARY_PATH, val)
 
 
@@ -145,8 +136,6 @@ def addFileName(data):
         fileUrl = getFromDict(track, TRACK_FILE_URL_PATH)
         fileName = getFilenameFromUrl(fileUrl)
         setInDict(track, TRACK_FILE_URL_PATH[:-1] + [FILE_NAME], fileName)
-
-    return data
 
 
 def autogenerateFields(data):
@@ -160,7 +149,6 @@ def autogenerateFields(data):
 
 if __name__ == '__main__':
     appData.initApp()
-    #autogenerate()
     app.run(host='0.0.0.0')
 
 

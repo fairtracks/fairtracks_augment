@@ -1,14 +1,12 @@
 import json
-import os
 import urllib.request
 from collections import defaultdict
-from os.path import dirname
 
 import owlready2
 
-from CommonFunctions import getFromDict, getPathsToElement, getFilenameFromUrl
-from Constants import ONTOLOGY, PROPERTIES, SCHEMAS, TERM_ID, SCHEMA_FOLDER_PATH, \
-    ONTOLOGY_FOLDER_PATH
+from CommonFunctions import getFromDict, getPathsToElement, getSchemaFilePath, \
+    getOntologyFilePath
+from Constants import ONTOLOGY, PROPERTIES, SCHEMAS, TERM_ID, PHENOTYPE, SAMPLES
 
 
 class AppData():
@@ -23,15 +21,9 @@ class AppData():
     def getOntologies(self):
         return self._ontologies
 
-    def setPathsWithOntologyUrls(self, paths):
-        self._pathsWithOntologyUrls = paths
-
-    def setOntologies(self, ontologies):
-        self._ontologies = ontologies
-
     def initApp(self):
         for category, url in SCHEMAS.items():
-            schemaFn, _ = urllib.request.urlretrieve(url, self._getSchemaFilePath(category))
+            schemaFn, _ = urllib.request.urlretrieve(url, getSchemaFilePath(category))
 
             with open(schemaFn, 'r') as schemaFile:
                 schemaJson = json.load(schemaFile)
@@ -39,7 +31,7 @@ class AppData():
                 ontologyUrlsMap = self._getOntologyUrlsFromSchema(schemaJson[PROPERTIES], pathsToElement)
                 self._pathsWithOntologyUrls[category] = ontologyUrlsMap
 
-        print(self._pathsWithOntologyUrls)
+        self._handlePhenotype()
 
         self._downloadOntologyFiles()
 
@@ -52,10 +44,11 @@ class AppData():
                     ontologyUrls.add(ontoUrl)
 
         for url in ontologyUrls:
-            print('loading ' + str(url))
-            path = self._getOntologyFilePath(url)
-            if not os.path.exists(path):
-                ontoFile, _ = urllib.request.urlretrieve(url, path)
+            path = getOntologyFilePath(url)
+            print('loading: ' + url)
+            # if not os.path.exists(path):
+            #     ontoFile, _ = urllib.request.urlretrieve(url, path)
+            ontoFile, _ = urllib.request.urlretrieve(url, path)
 
             ontology = owlready2.get_ontology(path)
             ontology.load()
@@ -78,31 +71,14 @@ class AppData():
 
         return pathsAndUrls
 
-    def _getSchemaFilePath(self, category):
-        path = os.path.join(SCHEMA_FOLDER_PATH, category + '.json')
-        if not os.path.exists(dirname(path)):
-            os.makedirs(os.path.dirname(path))
+    def _handlePhenotype(self):
+        if PHENOTYPE in self._pathsWithOntologyUrls:
+            phenotypePathsAndUrls = self._pathsWithOntologyUrls[PHENOTYPE]
+            correctedPathsAndUrls = []
+            for path, ontoUrls in phenotypePathsAndUrls:
+                path.insert(0, PHENOTYPE)
+                correctedPathsAndUrls.append((path, ontoUrls))
 
-        return path
-
-    def _getOntologyFilePath(self, url):
-        path = os.path.join(ONTOLOGY_FOLDER_PATH, getFilenameFromUrl(url))
-        if not os.path.exists(dirname(path)):
-            os.makedirs(os.path.dirname(path))
-
-        return path
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            self._pathsWithOntologyUrls[SAMPLES].extend(correctedPathsAndUrls)
+            del self._pathsWithOntologyUrls[PHENOTYPE]
 

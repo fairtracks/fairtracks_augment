@@ -3,12 +3,14 @@ TRACKS = 'tracks'
 STUDIES = 'studies'
 EXPERIMENTS = 'experiments'
 SAMPLES = 'samples'
+PHENOTYPE = 'phenotype'
 JSON_CATEGORIES = [TRACKS, EXPERIMENTS, STUDIES, SAMPLES]
 
 EXPERIMENT_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/current_test/json/schema/fairtracks_experiment.schema.json'
 SAMPLE_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/current_test/json/schema/fairtracks_sample.schema.json'
 TRACK_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/current_test/json/schema/fairtracks_track.schema.json'
-SCHEMAS = {EXPERIMENTS: EXPERIMENT_SCHEMA_URL, SAMPLES: SAMPLE_SCHEMA_URL, TRACKS: TRACK_SCHEMA_URL}
+PHENOTYPE_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/current_test/json/schema/fairtracks_phenotype.schema.json'
+SCHEMAS = {EXPERIMENTS: EXPERIMENT_SCHEMA_URL, SAMPLES: SAMPLE_SCHEMA_URL, TRACKS: TRACK_SCHEMA_URL, PHENOTYPE:PHENOTYPE_SCHEMA_URL }
 
 TERM_ID = 'term_id'
 PROPERTIES = 'properties'
