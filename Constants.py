@@ -37,7 +37,7 @@ EXPERIMENT_TARGET_PATHS = [['target', 'sequence_feature', 'term_label'], ['targe
                            ['target', 'macromolecular_structure', 'term_label'],
                            ['target', 'phenotype', 'term_label']]
 
-TARGET_DETAILS_PATH = ['target', 'target_details']
+TARGET_DETAILS_PATH = ['target', 'details']
 TARGET_SUMMARY_PATH = ['target', 'summary']
 TRACK_FILE_URL_PATH = ['file_url']
 
