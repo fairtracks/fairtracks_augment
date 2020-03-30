@@ -9,7 +9,10 @@ from Constants import TRACKS, \
     EXPERIMENTS, SAMPLES, TERM_LABEL, DOC_INFO, \
     DOC_ONTOLOGY_VERSIONS, FILE_NAME, VERSION_IRI, DOAP_VERSION, EDAM_ONTOLOGY, \
     SAMPLE_TYPE_MAPPING, BIOSPECIMEN_CLASS_PATH, SAMPLE_TYPE_SUMMARY_PATH, EXPERIMENT_TARGET_PATHS, \
-    TARGET_DETAILS_PATH, TARGET_SUMMARY_PATH, TRACK_FILE_URL_PATH
+    TARGET_DETAILS_PATH, TARGET_SUMMARY_PATH, TRACK_FILE_URL_PATH, SPECIES_ID_PATH, \
+    IDENTIFIERS_API_URL, RESOLVED_RESOURCES, NCBI_TAXONOMY_RESOLVER_URL, SPECIES_NAME_PATH
+
+import requests
 
 app = Flask(__name__)
 
@@ -137,6 +140,36 @@ def addFileName(data):
         fileName = getFilenameFromUrl(fileUrl)
         setInDict(track, TRACK_FILE_URL_PATH[:-1] + [FILE_NAME], fileName)
 
+def addSpeciesName(data):
+    samples = data[SAMPLES]
+    for sample in samples:
+        speciesId = getFromDict(sample, SPECIES_ID_PATH)
+        providerCode = resolveIdentifier(speciesId)
+        speciesName = getSpeciesName(speciesId.split('taxonomy:')[1], providerCode)
+        print(speciesName)
+        setInDict(sample, SPECIES_NAME_PATH, speciesName)
+
+
+def resolveIdentifier(speciesId):
+    url = IDENTIFIERS_API_URL + speciesId
+    responseJson = requests.get(url).json()
+
+    for resource in responseJson['payload'][RESOLVED_RESOURCES]:
+        if 'providerCode' in resource:
+            if resource['providerCode'] == 'ncbi':
+                return resource['providerCode']
+
+
+def getSpeciesName(speciesId, providerCode):
+    if providerCode == 'ncbi':
+        url = NCBI_TAXONOMY_RESOLVER_URL + '&id=' + str(speciesId)
+
+        print(url)
+        responseJson = requests.get(url).json()
+        speciesName = responseJson['result'][speciesId]['scientificname']
+
+        return speciesName
+
 
 def autogenerateFields(data):
     generateTermLabels(data)
@@ -144,6 +177,7 @@ def autogenerateFields(data):
     addFileName(data)
     addSampleSummary(data)
     addTargetSummary(data)
+    addSpeciesName(data)
     #print(json.dumps(data))
 
 
