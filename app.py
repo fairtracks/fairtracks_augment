@@ -83,7 +83,7 @@ def generateTermLabels(data):
                 except KeyError:
                     continue
 
-                termLabelVal = searchOntologiesForTermId(ontologyUrls, termIdVal)
+                termLabelVal = searchOntologiesForTermId(tuple(ontologyUrls), termIdVal)
 
                 if termLabelVal:
                     setInDict(item, path[:-1] + [TERM_LABEL], termLabelVal)
