@@ -82,20 +82,26 @@ def generateTermLabels(data):
                 except KeyError:
                     continue
 
-                termLabelVal = ''
-                for url in ontologyUrls:
-                    ontology = appData.getOntologies()[url]
-                    termLabelSearch = ontology.search(iri=termIdVal)
-                    if termLabelSearch:
-                        termLabelVal = termLabelSearch[0].label[0]
-                    if termLabelVal:
-                        break
+                termLabelVal = searchOntologiesForTermId(ontologyUrls, termIdVal)
 
                 if termLabelVal:
                     setInDict(item, path[:-1] + [TERM_LABEL], termLabelVal)
                 else:
                     abort(400, 'Item ' + termIdVal + ' not found in ontologies ' + str(ontologyUrls)
                           + ' (path in json: ' + makeStrPathFromList(path, category) + ')')
+
+
+@functools.lru_cache(maxsize=50000)
+def searchOntologiesForTermId(ontologyUrls, termIdVal):
+    termLabelVal = ''
+    for url in ontologyUrls:
+        ontology = appData.getOntologies()[url]
+        termLabelSearch = ontology.search(iri=termIdVal)
+        if termLabelSearch:
+            termLabelVal = termLabelSearch[0].label[0]
+        if termLabelVal:
+            break
+    return termLabelVal
 
 
 def addSampleSummary(data):
@@ -140,13 +146,20 @@ def addFileName(data):
         fileName = getFilenameFromUrl(fileUrl)
         setInDict(track, TRACK_FILE_URL_PATH[:-1] + [FILE_NAME], fileName)
 
+
 def addSpeciesName(data):
     samples = data[SAMPLES]
     for sample in samples:
         speciesId = getFromDict(sample, SPECIES_ID_PATH)
-        providerCode = resolveIdentifier(speciesId)
-        speciesName = getSpeciesName(speciesId.split('taxonomy:')[1], providerCode)
+        speciesName = getSpeciesNameFromId(speciesId)
         setInDict(sample, SPECIES_NAME_PATH, speciesName)
+
+
+@functools.lru_cache(maxsize=1000)
+def getSpeciesNameFromId(speciesId):
+    providerCode = resolveIdentifier(speciesId)
+    speciesName = getSpeciesName(speciesId.split('taxonomy:')[1], providerCode)
+    return speciesName
 
 
 def resolveIdentifier(speciesId):
