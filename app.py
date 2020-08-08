@@ -31,10 +31,11 @@ def custom400(error):
     return make_response(response, 400)
 
 
+@app.route('/augment', methods=['POST'])
 @app.route('/autogenerate', methods=['POST'])
-def autogenerate():
+def augment():
     data = json.loads(request.data)
-    autogenerateFields(data)
+    augmentFields(data)
 
     return data
 
@@ -183,7 +184,7 @@ def getSpeciesName(speciesId, providerCode):
         return speciesName
 
 
-def autogenerateFields(data):
+def augmentFields(data):
     generateTermLabels(data)
     addOntologyVersions(data)
     addFileName(data)
