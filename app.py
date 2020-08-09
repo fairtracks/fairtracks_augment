@@ -1,5 +1,6 @@
 import json
 import functools
+import requests
 
 from flask import Flask, jsonify, make_response, abort, request
 
@@ -9,11 +10,12 @@ from CommonFunctions import setInDict, getFilenameFromUrl, getFromDict, makeStrP
 from Constants import TRACKS, \
     EXPERIMENTS, SAMPLES, TERM_LABEL, DOC_INFO, \
     DOC_ONTOLOGY_VERSIONS, FILE_NAME, VERSION_IRI, DOAP_VERSION, EDAM_ONTOLOGY, \
-    SAMPLE_TYPE_MAPPING, BIOSPECIMEN_CLASS_PATH, SAMPLE_TYPE_SUMMARY_PATH, EXPERIMENT_TARGET_PATHS, \
-    TARGET_DETAILS_PATH, TARGET_SUMMARY_PATH, TRACK_FILE_URL_PATH, SPECIES_ID_PATH, \
-    IDENTIFIERS_API_URL, RESOLVED_RESOURCES, NCBI_TAXONOMY_RESOLVER_URL, SPECIES_NAME_PATH
-
-import requests
+    SAMPLE_TYPE_MAPPING, BIOSPECIMEN_CLASS_PATH, SAMPLE_TYPE_SUMMARY_PATH, \
+    EXPERIMENT_TARGET_PATHS, \
+    TARGET_DETAILS_PATH, TARGET_SUMMARY_PATH, TRACK_FILE_URL_PATH, \
+    SPECIES_ID_PATH, \
+    IDENTIFIERS_API_URL, RESOLVED_RESOURCES, NCBI_TAXONOMY_RESOLVER_URL, \
+    SPECIES_NAME_PATH, SAMPLE_ORGANISM_PART_PATH, SAMPLE_DETAILS_PATH
 
 app = Flask(__name__)
 
@@ -112,13 +114,23 @@ def addSampleSummary(data):
             sampleTypeVal = getFromDict(sample, SAMPLE_TYPE_MAPPING[biospecimenTermId])
             if TERM_LABEL in sampleTypeVal:
                 summary = sampleTypeVal[TERM_LABEL]
+                details = []
 
                 try:
                     organismPart = getFromDict(sample, SAMPLE_ORGANISM_PART_PATH)
                     if summary != organismPart:
-                        summary = '{} ({})'.format(summary, organismPart)
+                        details.append(organismPart)
                 except KeyError:
                     pass
+
+                try:
+                    sample_details = getFromDict(sample, SAMPLE_DETAILS_PATH)
+                    details.append(sample_details)
+                except KeyError:
+                    pass
+
+                if details:
+                    summary = "{} ({})".format(summary, ', '.join(details))
 
                 setInDict(sample, SAMPLE_TYPE_SUMMARY_PATH, summary)
         else:
