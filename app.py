@@ -111,7 +111,16 @@ def addSampleSummary(data):
         if biospecimenTermId in SAMPLE_TYPE_MAPPING:
             sampleTypeVal = getFromDict(sample, SAMPLE_TYPE_MAPPING[biospecimenTermId])
             if TERM_LABEL in sampleTypeVal:
-                setInDict(sample, SAMPLE_TYPE_SUMMARY_PATH, sampleTypeVal[TERM_LABEL])
+                summary = sampleTypeVal[TERM_LABEL]
+
+                try:
+                    organismPart = getFromDict(sample, SAMPLE_ORGANISM_PART_PATH)
+                    if summary != organismPart:
+                        summary = '{} ({})'.format(summary, organismPart)
+                except KeyError:
+                    pass
+
+                setInDict(sample, SAMPLE_TYPE_SUMMARY_PATH, summary)
         else:
             abort(400, 'Unexpected biospecimen_class term_id: ' + biospecimenTermId)
 
