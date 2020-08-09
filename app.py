@@ -51,8 +51,6 @@ def addOntologyVersions(data):
 
         urlAndVersions = []
         for url, ontology in appData.getOntologies().items():
-            if url in docUrls:
-                continue
             fn = getOntologyFilePath(url)
             edam = False
             if EDAM_ONTOLOGY in url:
