@@ -15,7 +15,8 @@ from Constants import TRACKS, \
     TARGET_DETAILS_PATH, TARGET_SUMMARY_PATH, TRACK_FILE_URL_PATH, \
     SPECIES_ID_PATH, \
     IDENTIFIERS_API_URL, RESOLVED_RESOURCES, NCBI_TAXONOMY_RESOLVER_URL, \
-    SPECIES_NAME_PATH, SAMPLE_ORGANISM_PART_PATH, SAMPLE_DETAILS_PATH
+    SPECIES_NAME_PATH, SAMPLE_ORGANISM_PART_PATH, SAMPLE_DETAILS_PATH, \
+    HAS_AUGMENTED_METADATA
 
 app = Flask(__name__)
 
@@ -203,6 +204,11 @@ def getSpeciesName(speciesId, providerCode):
         return speciesName
 
 
+def setAugmentedDataFlag(data):
+    if DOC_INFO in data:
+        data[DOC_INFO][HAS_AUGMENTED_METADATA] = True
+
+
 def augmentFields(data):
     generateTermLabels(data)
     addOntologyVersions(data)
@@ -210,6 +216,7 @@ def augmentFields(data):
     addSampleSummary(data)
     addTargetSummary(data)
     addSpeciesName(data)
+    setAugmentedDataFlag(data)
     #print(json.dumps(data))
 
 

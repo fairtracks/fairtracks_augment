@@ -18,6 +18,7 @@ ONTOLOGY = 'ontology'
 TERM_LABEL = 'term_label'
 DOC_INFO = 'doc_info'
 DOC_ONTOLOGY_VERSIONS = 'doc_ontology_versions'
+HAS_AUGMENTED_METADATA = 'has_augmented_metadata'
 FILE_NAME = 'file_name'
 FILE_URL = 'file_url'
 
