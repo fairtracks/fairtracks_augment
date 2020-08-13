@@ -1,8 +1,8 @@
 FROM python:3.8.0-slim-buster
 
-WORKDIR /fairtracks-autogenerate
+WORKDIR /fairtracks-augment
 
-COPY ./ /fairtracks-autogenerate/
+COPY ./ /fairtracks-augment/
 
 RUN pip install -r requirements.txt
 

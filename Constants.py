@@ -18,6 +18,7 @@ ONTOLOGY = 'ontology'
 TERM_LABEL = 'term_label'
 DOC_INFO = 'doc_info'
 DOC_ONTOLOGY_VERSIONS = 'doc_ontology_versions'
+HAS_AUGMENTED_METADATA = 'has_augmented_metadata'
 FILE_NAME = 'file_name'
 FILE_URL = 'file_url'
 
@@ -32,6 +33,8 @@ SAMPLE_TYPE_MAPPING = {'http://purl.obolibrary.org/obo/NCIT_C12508':['sample_typ
                        'http://purl.obolibrary.org/obo/NCIT_C12913':['sample_type', 'abnormal_cell_type'],
                        'http://purl.obolibrary.org/obo/NCIT_C16403':['sample_type', 'cell_line'],
                        'http://purl.obolibrary.org/obo/NCIT_C103199':['sample_type', 'organism_part']}
+SAMPLE_ORGANISM_PART_PATH = ['sample_type', 'organism_part', 'term_label']
+SAMPLE_DETAILS_PATH = ['sample_type', 'details']
 
 BIOSPECIMEN_CLASS_PATH = ['biospecimen_class', 'term_id']
 SAMPLE_TYPE_SUMMARY_PATH = ['sample_type', 'summary']
