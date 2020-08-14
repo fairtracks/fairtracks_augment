@@ -1,5 +1,9 @@
+from copy import copy
+
 import os
 from os.path import dirname
+import json
+import urllib.request
 
 from Constants import SCHEMA_FOLDER_PATH, ONTOLOGY_FOLDER_PATH
 
@@ -10,20 +14,33 @@ def getFromDict(dataDict, pathList):
     return dataDict
 
 
-def getPathsToElement(data, key, path=[]):
-    if isinstance(data, dict):
-        for k,v in data.items():
-            newPath = path + [k]
-            if k == key:
-                yield newPath
-            else:
-                for el in getPathsToElement(v, key, newPath):
-                    yield el
-    elif isinstance(data, list):
-        for i in data:
-            for el in getPathsToElement(i, key, path):
-                yield el
+def getPathsToElement(elName, url=None, data=None, path=[]):
+    assert (url is not None or data is not None)
 
+    if data is None:
+        data = json.load(urllib.request.urlopen(url))
+
+    if isinstance(data, dict):
+        for key, val in data.items():
+            newPath = copy(path)
+            newUrl = url
+
+            if key == '$ref':
+                newUrl = '/'.join([url.rsplit('/', 1)[0], val])
+                data = None
+            else:
+                newPath.append(key)
+                data = val
+
+            if key == elName:
+                yield url, newPath, val
+            else:
+                for _ in getPathsToElement(elName, newUrl, data, newPath):
+                    yield _
+    elif isinstance(data, list):
+        for i, item in enumerate(data):
+            for _ in getPathsToElement(elName, url, item, path + [i]):
+                yield _
 
 def setInDict(dataDict, pathList, value):
     getFromDict(dataDict, pathList[:-1])[pathList[-1]] = value

@@ -1,6 +1,9 @@
+import os
+
 import json
 import functools
 import requests
+import urllib.request
 
 from flask import Flask, jsonify, make_response, abort, request
 
@@ -16,11 +19,10 @@ from Constants import TRACKS, \
     SPECIES_ID_PATH, \
     IDENTIFIERS_API_URL, RESOLVED_RESOURCES, NCBI_TAXONOMY_RESOLVER_URL, \
     SPECIES_NAME_PATH, SAMPLE_ORGANISM_PART_PATH, SAMPLE_DETAILS_PATH, \
-    HAS_AUGMENTED_METADATA
+    HAS_AUGMENTED_METADATA, SCHEMA_FOLDER_PATH, SCHEMA_URL_PART1, SCHEMA_URL_PART2
 
 app = Flask(__name__)
-
-appData = AppData()
+ontologies = {}
 
 
 @app.route('/')
@@ -38,19 +40,20 @@ def custom400(error):
 @app.route('/autogenerate', methods=['POST'])
 def augment():
     data = json.loads(request.data)
-    augmentFields(data)
+    appData = AppData(ontologies)
+    appData.initApp(data)
+    augmentFields(data, appData)
 
     return data
 
 
-def addOntologyVersions(data):
+def addOntologyVersions(data, appData):
     if DOC_INFO in data:
         docInfo = data[DOC_INFO]
         if DOC_ONTOLOGY_VERSIONS not in docInfo:
             docInfo[DOC_ONTOLOGY_VERSIONS] = {}
 
         docOntologyVersions = docInfo[DOC_ONTOLOGY_VERSIONS]
-        docUrls = docOntologyVersions.keys()
 
         urlAndVersions = []
         for url, ontology in appData.getOntologies().items():
@@ -76,26 +79,31 @@ def addOntologyVersions(data):
             docOntologyVersions[url] = versionIri
 
 
-def generateTermLabels(data):
-    for category, paths in appData.getPathsWithOntologyUrls().items():
+def generateTermLabels(data, appData):
+    for category in data:
+        if not isinstance(data[category], list):
+            continue
         for item in data[category]:
-            for path, ontologyUrls in paths:
+            for path, ontologyUrls in appData.getPathsWithOntologyUrls():
+                if path[0] != category:
+                    continue
+
                 try:
-                    termIdVal = getFromDict(item, path)
+                    termIdVal = getFromDict(item, path[1:])
                 except KeyError:
                     continue
 
-                termLabelVal = searchOntologiesForTermId(tuple(ontologyUrls), termIdVal)
+                termLabelVal = searchOntologiesForTermId(tuple(ontologyUrls), termIdVal, appData)
 
                 if termLabelVal:
-                    setInDict(item, path[:-1] + [TERM_LABEL], termLabelVal)
+                    setInDict(item, path[1:-1] + [TERM_LABEL], termLabelVal)
                 else:
                     abort(400, 'Item ' + termIdVal + ' not found in ontologies ' + str(ontologyUrls)
                           + ' (path in json: ' + makeStrPathFromList(path, category) + ')')
 
 
 @functools.lru_cache(maxsize=50000)
-def searchOntologiesForTermId(ontologyUrls, termIdVal):
+def searchOntologiesForTermId(ontologyUrls, termIdVal, appData):
     termLabelVal = ''
     for url in ontologyUrls:
         ontology = appData.getOntologies()[url]
@@ -168,14 +176,12 @@ def addFileName(data):
         fileName = getFilenameFromUrl(fileUrl)
         setInDict(track, TRACK_FILE_URL_PATH[:-1] + [FILE_NAME], fileName)
 
-
 def addSpeciesName(data):
     samples = data[SAMPLES]
     for sample in samples:
         speciesId = getFromDict(sample, SPECIES_ID_PATH)
         speciesName = getSpeciesNameFromId(speciesId)
         setInDict(sample, SPECIES_NAME_PATH, speciesName)
-
 
 @functools.lru_cache(maxsize=1000)
 def getSpeciesNameFromId(speciesId):
@@ -209,9 +215,9 @@ def setAugmentedDataFlag(data):
         data[DOC_INFO][HAS_AUGMENTED_METADATA] = True
 
 
-def augmentFields(data):
-    generateTermLabels(data)
-    addOntologyVersions(data)
+def augmentFields(data, appData):
+    generateTermLabels(data, appData)
+    addOntologyVersions(data, appData)
     addFileName(data)
     addSampleSummary(data)
     addTargetSummary(data)
@@ -220,8 +226,30 @@ def augmentFields(data):
     #print(json.dumps(data))
 
 
+def initOntologies():
+    print("initializing ontologies")
+    i = 1
+    currentSchemaUrl = ""
+    while True:
+        schemaUrl = SCHEMA_URL_PART1 + "v" + str(i) + SCHEMA_URL_PART2
+        try:
+            schemaFn, _ = urllib.request.urlretrieve(schemaUrl, os.path.join(SCHEMA_FOLDER_PATH, 'schema.json'))
+            currentSchemaUrl = schemaUrl
+            i += 1
+        except:
+            break
+
+    data = {}
+    data["@schema"] = currentSchemaUrl
+    appData = AppData({})
+    appData.initApp(data)
+
+    return appData.getOntologies()
+
+
 if __name__ == '__main__':
-    appData.initApp()
+    ontologies = initOntologies()
+    #appData.initApp()
     app.run(host='0.0.0.0')
 
 
