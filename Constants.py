@@ -4,7 +4,11 @@ STUDIES = 'studies'
 EXPERIMENTS = 'experiments'
 SAMPLES = 'samples'
 PHENOTYPE = 'phenotype'
+ITEMS = 'items'
 JSON_CATEGORIES = [TRACKS, EXPERIMENTS, STUDIES, SAMPLES]
+
+SCHEMA_URL_PART1 = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/'
+SCHEMA_URL_PART2 = '/current/json/schema/fairtracks.schema.json'
 
 EXPERIMENT_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/current/json/schema/fairtracks_experiment.schema.json'
 SAMPLE_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/current/json/schema/fairtracks_sample.schema.json'

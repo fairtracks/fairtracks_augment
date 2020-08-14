@@ -1,19 +1,18 @@
-import json
-import urllib.request
 from collections import defaultdict
 
+import os
 import owlready2
+import urllib.request
 
-from CommonFunctions import getFromDict, getPathsToElement, getSchemaFilePath, \
-    getOntologyFilePath
-from Constants import ONTOLOGY, PROPERTIES, SCHEMAS, TERM_ID, PHENOTYPE, SAMPLES
+from CommonFunctions import getPathsToElement, getOntologyFilePath
+from Constants import ONTOLOGY, PROPERTIES, TERM_ID, SCHEMA_FOLDER_PATH, ITEMS
 
 
 class AppData():
 
-    def __init__(self):
+    def __init__(self, ontologies):
         self._pathsWithOntologyUrls = defaultdict(list)
-        self._ontologies = {}
+        self._ontologies = ontologies
 
     def getPathsWithOntologyUrls(self):
         return self._pathsWithOntologyUrls
@@ -21,64 +20,52 @@ class AppData():
     def getOntologies(self):
         return self._ontologies
 
-    def initApp(self):
-        for category, url in SCHEMAS.items():
-            schemaFn, _ = urllib.request.urlretrieve(url, getSchemaFilePath(category))
+    def initApp(self, data):
+        schemaUrl = data['@schema']
+        schemaFn, _ = urllib.request.urlretrieve(schemaUrl, os.path.join(SCHEMA_FOLDER_PATH, 'schema.json'))
 
-            with open(schemaFn, 'r') as schemaFile:
-                schemaJson = json.load(schemaFile)
-                pathsToElement = getPathsToElement(schemaJson[PROPERTIES], TERM_ID)
-                ontologyUrlsMap = self._getOntologyUrlsFromSchema(schemaJson[PROPERTIES], pathsToElement)
-                self._pathsWithOntologyUrls[category] = ontologyUrlsMap
+        pathsToElement = getPathsToElement(TERM_ID, url=schemaUrl)
 
-        self._handlePhenotype()
+        ontologyUrlsMap = self._getOntologyUrlsFromSchema(pathsToElement)
+        self._pathsWithOntologyUrls = ontologyUrlsMap
 
         self._downloadOntologyFiles()
 
     def _downloadOntologyFiles(self):
         ontologyUrls = set()
 
-        for category in self._pathsWithOntologyUrls.keys():
-            for path, ontoUrls in self._pathsWithOntologyUrls[category]:
-                for ontoUrl in ontoUrls:
-                    ontologyUrls.add(ontoUrl)
+        for path, ontoUrls in self._pathsWithOntologyUrls:
+            for ontoUrl in ontoUrls:
+                ontologyUrls.add(ontoUrl)
 
         for url in ontologyUrls:
             path = getOntologyFilePath(url)
-            print('loading: ' + url)
-            # if not os.path.exists(path):
-            #     ontoFile, _ = urllib.request.urlretrieve(url, path)
-            ontoFile, _ = urllib.request.urlretrieve(url, path)
 
-            ontology = owlready2.get_ontology(path)
-            ontology.load()
-            print('loaded: ' + url)
-            self._ontologies[url] = ontology
+            if not os.path.exists(path):
+                print('downloading: ' + url)
+                ontoFile, _ = urllib.request.urlretrieve(url, path)
+                print('downloaded: ' + url)
+            #ontoFile, _ = urllib.request.urlretrieve(url, path)
 
-    def _getOntologyUrlsFromSchema(self, data, paths):
+            if url not in self._ontologies:
+                print('loading: ' + url)
+                ontology = owlready2.get_ontology(path)
+                ontology.load()
+                print('loaded: ' + url)
+                self._ontologies[url] = ontology
+
+    def _getOntologyUrlsFromSchema(self, paths):
         pathsAndUrls = []
 
-        for path in paths:
+        for url, path, val in paths:
             ontologyUrls = []
-            el = getFromDict(data, path)
-            if ONTOLOGY in el:
-                ontologyUrls = el[ONTOLOGY]
+            if ONTOLOGY in val:
+                ontologyUrls = val[ONTOLOGY]
                 if not isinstance(ontologyUrls, list):
                     ontologyUrls = [ontologyUrls]
-            newPath = [p for p in path if p != PROPERTIES]
+            newPath = [p for p in path if p != PROPERTIES and p != ITEMS]
             if ontologyUrls:
                 pathsAndUrls.append((newPath, ontologyUrls))
 
         return pathsAndUrls
-
-    def _handlePhenotype(self):
-        if PHENOTYPE in self._pathsWithOntologyUrls:
-            phenotypePathsAndUrls = self._pathsWithOntologyUrls[PHENOTYPE]
-            correctedPathsAndUrls = []
-            for path, ontoUrls in phenotypePathsAndUrls:
-                path.insert(0, PHENOTYPE)
-                correctedPathsAndUrls.append((path, ontoUrls))
-
-            self._pathsWithOntologyUrls[SAMPLES].extend(correctedPathsAndUrls)
-            del self._pathsWithOntologyUrls[PHENOTYPE]
 
