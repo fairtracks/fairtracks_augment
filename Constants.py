@@ -3,21 +3,12 @@ TRACKS = 'tracks'
 STUDIES = 'studies'
 EXPERIMENTS = 'experiments'
 SAMPLES = 'samples'
-PHENOTYPE = 'phenotype'
-ITEMS = 'items'
-JSON_CATEGORIES = [TRACKS, EXPERIMENTS, STUDIES, SAMPLES]
 
 SCHEMA_URL_PART1 = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/'
 SCHEMA_URL_PART2 = '/current/json/schema/fairtracks.schema.json'
-
-EXPERIMENT_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/current/json/schema/fairtracks_experiment.schema.json'
-SAMPLE_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/current/json/schema/fairtracks_sample.schema.json'
-TRACK_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/current/json/schema/fairtracks_track.schema.json'
-PHENOTYPE_SCHEMA_URL = 'https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/current/json/schema/fairtracks_phenotype.schema.json'
-SCHEMAS = {EXPERIMENTS: EXPERIMENT_SCHEMA_URL, SAMPLES: SAMPLE_SCHEMA_URL, TRACKS: TRACK_SCHEMA_URL, PHENOTYPE:PHENOTYPE_SCHEMA_URL }
+TOP_SCHEMA_FN = 'fairtracks.schema.json'
 
 TERM_ID = 'term_id'
-PROPERTIES = 'properties'
 ONTOLOGY = 'ontology'
 TERM_LABEL = 'term_label'
 DOC_INFO = 'doc_info'
@@ -25,6 +16,8 @@ DOC_ONTOLOGY_VERSIONS = 'doc_ontology_versions'
 HAS_AUGMENTED_METADATA = 'has_augmented_metadata'
 FILE_NAME = 'file_name'
 FILE_URL = 'file_url'
+ITEMS = 'items'
+PROPERTIES = 'properties'
 
 VERSION_IRI = '<owl:versionIRI rdf:resource="'
 DOAP_VERSION = '<doap:Version>'
@@ -52,8 +45,6 @@ TARGET_SUMMARY_PATH = ['target', 'summary']
 TRACK_FILE_URL_PATH = ['file_url']
 SPECIES_ID_PATH = ['species_id']
 SPECIES_NAME_PATH = ['species_name']
-
-SCHEMA_FOLDER_PATH = 'schema'
 
 ONTOLOGY_FOLDER_PATH = 'ontologies'
 

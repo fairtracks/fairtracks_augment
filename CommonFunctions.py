@@ -5,7 +5,7 @@ from os.path import dirname
 import json
 import urllib.request
 
-from Constants import SCHEMA_FOLDER_PATH, ONTOLOGY_FOLDER_PATH
+from Constants import ONTOLOGY_FOLDER_PATH
 
 
 def getFromDict(dataDict, pathList):
@@ -14,11 +14,13 @@ def getFromDict(dataDict, pathList):
     return dataDict
 
 
-def getPathsToElement(elName, url=None, data=None, path=[]):
+def getPathsToElement(elName, url=None, data=None, path=[], schemas={}):
     assert (url is not None or data is not None)
 
     if data is None:
         data = json.load(urllib.request.urlopen(url))
+        schemaFn = url.split('/')[-1]
+        schemas[schemaFn] = data
 
     if isinstance(data, dict):
         for key, val in data.items():
@@ -26,8 +28,11 @@ def getPathsToElement(elName, url=None, data=None, path=[]):
             newUrl = url
 
             if key == '$ref':
-                newUrl = '/'.join([url.rsplit('/', 1)[0], val])
-                data = None
+                if val in schemas:
+                    data = schemas[val]
+                else:
+                    newUrl = '/'.join([url.rsplit('/', 1)[0], val])
+                    data = None
             else:
                 newPath.append(key)
                 data = val
@@ -35,11 +40,11 @@ def getPathsToElement(elName, url=None, data=None, path=[]):
             if key == elName:
                 yield url, newPath, val
             else:
-                for _ in getPathsToElement(elName, newUrl, data, newPath):
+                for _ in getPathsToElement(elName, newUrl, data, newPath, schemas):
                     yield _
     elif isinstance(data, list):
         for i, item in enumerate(data):
-            for _ in getPathsToElement(elName, url, item, path + [i]):
+            for _ in getPathsToElement(elName, url, item, path + [i], schemas):
                 yield _
 
 def setInDict(dataDict, pathList, value):
@@ -54,14 +59,6 @@ def getFilenameFromUrl(url):
 
 def makeStrPathFromList(path, category):
     return '->'.join([category] + path)
-
-
-def getSchemaFilePath(category):
-        path = os.path.join(SCHEMA_FOLDER_PATH, category + '.json')
-        if not os.path.exists(dirname(path)):
-            os.makedirs(os.path.dirname(path))
-
-        return path
 
 
 def getOntologyFilePath(url):

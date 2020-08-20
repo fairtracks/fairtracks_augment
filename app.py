@@ -1,11 +1,12 @@
-import os
-
-import json
 import functools
+import json
+import os
 import requests
+import tempfile
 import urllib.request
-
+import zipfile
 from flask import Flask, jsonify, make_response, abort, request
+from werkzeug.utils import secure_filename
 
 from AppData import AppData
 from CommonFunctions import setInDict, getFilenameFromUrl, getFromDict, makeStrPathFromList, \
@@ -19,7 +20,7 @@ from Constants import TRACKS, \
     SPECIES_ID_PATH, \
     IDENTIFIERS_API_URL, RESOLVED_RESOURCES, NCBI_TAXONOMY_RESOLVER_URL, \
     SPECIES_NAME_PATH, SAMPLE_ORGANISM_PART_PATH, SAMPLE_DETAILS_PATH, \
-    HAS_AUGMENTED_METADATA, SCHEMA_FOLDER_PATH, SCHEMA_URL_PART1, SCHEMA_URL_PART2
+    HAS_AUGMENTED_METADATA, SCHEMA_URL_PART1, SCHEMA_URL_PART2
 
 app = Flask(__name__)
 ontologies = {}
@@ -39,10 +40,34 @@ def custom400(error):
 @app.route('/augment', methods=['POST'])
 @app.route('/autogenerate', methods=['POST'])
 def augment():
-    data = json.loads(request.data)
-    appData = AppData(ontologies)
-    appData.initApp(data)
-    augmentFields(data, appData)
+    if 'data' not in request.files:
+        abort(400, 'Parameter called data containing fairtracks json data is required')
+    dataJson = request.files['data']
+
+    with tempfile.TemporaryDirectory() as tmpDir:
+        dataFn = ''
+        if dataJson:
+            dataFn = secure_filename(dataJson.filename)
+            dataJson.save(os.path.join(tmpDir, dataFn))
+
+        with open(os.path.join(tmpDir, dataFn)) as dataFile:
+            data = json.load(dataFile)
+
+        appData = AppData(ontologies)
+
+        if 'schemas' in request.files:
+            file = request.files['schemas']
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(tmpDir, filename))
+
+            with zipfile.ZipFile(os.path.join(tmpDir, filename), 'r') as archive:
+                archive.extractall(tmpDir)
+
+            appData.initApp(data, tmpDir)
+        else:
+            appData.initApp(data)
+
+        augmentFields(data, appData)
 
     return data
 
@@ -230,14 +255,15 @@ def initOntologies():
     print("initializing ontologies")
     i = 1
     currentSchemaUrl = ""
-    while True:
-        schemaUrl = SCHEMA_URL_PART1 + "v" + str(i) + SCHEMA_URL_PART2
-        try:
-            schemaFn, _ = urllib.request.urlretrieve(schemaUrl, os.path.join(SCHEMA_FOLDER_PATH, 'schema.json'))
-            currentSchemaUrl = schemaUrl
-            i += 1
-        except:
-            break
+    with tempfile.TemporaryDirectory() as tmpDir:
+        while True:
+            schemaUrl = SCHEMA_URL_PART1 + "v" + str(i) + SCHEMA_URL_PART2
+            try:
+                schemaFn, _ = urllib.request.urlretrieve(schemaUrl, os.path.join(tmpDir, 'schema.json'))
+                currentSchemaUrl = schemaUrl
+                i += 1
+            except:
+                break
 
     data = {}
     data["@schema"] = currentSchemaUrl
@@ -249,7 +275,7 @@ def initOntologies():
 
 if __name__ == '__main__':
     ontologies = initOntologies()
-    #appData.initApp()
+
     app.run(host='0.0.0.0')
 
 
