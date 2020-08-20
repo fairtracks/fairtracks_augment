@@ -3,9 +3,10 @@ from collections import defaultdict
 import os
 import owlready2
 import urllib.request
+import json
 
 from CommonFunctions import getPathsToElement, getOntologyFilePath
-from Constants import ONTOLOGY, PROPERTIES, TERM_ID, SCHEMA_FOLDER_PATH, ITEMS
+from Constants import ONTOLOGY, PROPERTIES, TERM_ID, ITEMS, TOP_SCHEMA_FN
 
 
 class AppData():
@@ -20,11 +21,19 @@ class AppData():
     def getOntologies(self):
         return self._ontologies
 
-    def initApp(self, data):
-        schemaUrl = data['@schema']
-        schemaFn, _ = urllib.request.urlretrieve(schemaUrl, os.path.join(SCHEMA_FOLDER_PATH, 'schema.json'))
+    def initApp(self, data, tmpDir=None):
+        if tmpDir:
+            schemas = {}
+            for filename in os.listdir(tmpDir):
+                if filename.endswith(".json"):
+                    with open(os.path.join(tmpDir, filename)) as schemaFile:
+                        schema = json.load(schemaFile)
+                        schemas[filename] = schema
 
-        pathsToElement = getPathsToElement(TERM_ID, url=schemaUrl)
+            pathsToElement = getPathsToElement(TERM_ID, data=schemas[TOP_SCHEMA_FN], schemas=schemas)
+        else:
+            schemaUrl = data['@schema']
+            pathsToElement = getPathsToElement(TERM_ID, url=schemaUrl)
 
         ontologyUrlsMap = self._getOntologyUrlsFromSchema(pathsToElement)
         self._pathsWithOntologyUrls = ontologyUrlsMap
