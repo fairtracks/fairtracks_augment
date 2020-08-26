@@ -201,12 +201,14 @@ def addFileName(data):
         fileName = getFilenameFromUrl(fileUrl)
         setInDict(track, TRACK_FILE_URL_PATH[:-1] + [FILE_NAME], fileName)
 
+
 def addSpeciesName(data):
     samples = data[SAMPLES]
     for sample in samples:
         speciesId = getFromDict(sample, SPECIES_ID_PATH)
         speciesName = getSpeciesNameFromId(speciesId)
         setInDict(sample, SPECIES_NAME_PATH, speciesName)
+
 
 @functools.lru_cache(maxsize=1000)
 def getSpeciesNameFromId(speciesId):
@@ -229,8 +231,13 @@ def getSpeciesName(speciesId, providerCode):
     if providerCode == 'ncbi':
         url = NCBI_TAXONOMY_RESOLVER_URL + '&id=' + str(speciesId)
 
-        responseJson = requests.get(url).json()
-        speciesName = responseJson['result'][speciesId]['scientificname']
+        for i in range(3):
+            try:
+                responseJson = requests.get(url).json()
+                speciesName = responseJson['result'][speciesId]['scientificname']
+                break
+            except KeyError:
+                pass
 
         return speciesName
 

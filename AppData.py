@@ -9,8 +9,7 @@ from CommonFunctions import getPathsToElement, getOntologyFilePath
 from Constants import ONTOLOGY, PROPERTIES, TERM_ID, ITEMS, TOP_SCHEMA_FN
 
 
-class AppData():
-
+class AppData:
     def __init__(self, ontologies):
         self._pathsWithOntologyUrls = defaultdict(list)
         self._ontologies = ontologies
@@ -77,4 +76,3 @@ class AppData():
                 pathsAndUrls.append((newPath, ontologyUrls))
 
         return pathsAndUrls
-
