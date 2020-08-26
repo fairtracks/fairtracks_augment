@@ -11,9 +11,10 @@ TOP_SCHEMA_FN = 'fairtracks.schema.json'
 TERM_ID = 'term_id'
 ONTOLOGY = 'ontology'
 TERM_LABEL = 'term_label'
-DOC_INFO = 'doc_info'
-DOC_ONTOLOGY_VERSIONS = 'doc_ontology_versions'
-HAS_AUGMENTED_METADATA = 'has_augmented_metadata'
+DOC_ONTOLOGY_VERSIONS_NAMES = {'doc_info': 'doc_ontology_versions',
+                               'document': 'ontology_versions'}
+HAS_AUGMENTED_METADATA = {'doc_info': 'has_augmented_metadata',
+                          'document': 'has_augmented_metadata'}
 FILE_NAME = 'file_name'
 FILE_URL = 'file_url'
 ITEMS = 'items'
