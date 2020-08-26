@@ -12,8 +12,9 @@ from AppData import AppData
 from CommonFunctions import setInDict, getFilenameFromUrl, getFromDict, makeStrPathFromList, \
     getOntologyFilePath
 from Constants import TRACKS, \
-    EXPERIMENTS, SAMPLES, TERM_LABEL, DOC_INFO, \
-    DOC_ONTOLOGY_VERSIONS, FILE_NAME, VERSION_IRI, DOAP_VERSION, EDAM_ONTOLOGY, \
+    EXPERIMENTS, SAMPLES, TERM_LABEL, \
+    DOC_ONTOLOGY_VERSIONS_NAMES, FILE_NAME, VERSION_IRI, DOAP_VERSION, \
+    EDAM_ONTOLOGY, \
     SAMPLE_TYPE_MAPPING, BIOSPECIMEN_CLASS_PATH, SAMPLE_TYPE_SUMMARY_PATH, \
     EXPERIMENT_TARGET_PATHS, \
     TARGET_DETAILS_PATH, TARGET_SUMMARY_PATH, TRACK_FILE_URL_PATH, \
@@ -73,35 +74,40 @@ def augment():
 
 
 def addOntologyVersions(data, appData):
-    if DOC_INFO in data:
-        docInfo = data[DOC_INFO]
-        if DOC_ONTOLOGY_VERSIONS not in docInfo:
-            docInfo[DOC_ONTOLOGY_VERSIONS] = {}
+    # Very cumbersome way to support both v1 and v2 names. Should be
+    # refactored. Also no good error message if no document info property is
+    # found.
+    for docInfoName in DOC_ONTOLOGY_VERSIONS_NAMES.keys():
+        if docInfoName in data:
+            docInfo = data[docInfoName]
+            docOntologyVersionsName = DOC_ONTOLOGY_VERSIONS_NAMES[docInfoName]
+            if docOntologyVersionsName not in docInfo:
+                docInfo[docOntologyVersionsName] = {}
 
-        docOntologyVersions = docInfo[DOC_ONTOLOGY_VERSIONS]
+            docOntologyVersions = docInfo[docOntologyVersionsName]
 
-        urlAndVersions = []
-        for url, ontology in appData.getOntologies().items():
-            fn = getOntologyFilePath(url)
-            edam = False
-            if EDAM_ONTOLOGY in url:
-                edam = True
-            with open(fn, 'r') as ontoFile:
-                for line in ontoFile:
-                    if edam:
-                        if DOAP_VERSION in line:
-                            versionNumber = line.split(DOAP_VERSION)[1].split('<')[0]
-                            versionIri = EDAM_ONTOLOGY + 'EDAM_' + versionNumber + '.owl'
-                            urlAndVersions.append((url, versionIri))
-                            break
-                    else:
-                        if VERSION_IRI in line:
-                            versionIri = line.split(VERSION_IRI)[1].split('"')[0]
-                            urlAndVersions.append((url, versionIri))
-                            break
+    urlAndVersions = []
+    for url, ontology in appData.getOntologies().items():
+        fn = getOntologyFilePath(url)
+        edam = False
+        if EDAM_ONTOLOGY in url:
+            edam = True
+        with open(fn, 'r') as ontoFile:
+            for line in ontoFile:
+                if edam:
+                    if DOAP_VERSION in line:
+                        versionNumber = line.split(DOAP_VERSION)[1].split('<')[0]
+                        versionIri = EDAM_ONTOLOGY + 'EDAM_' + versionNumber + '.owl'
+                        urlAndVersions.append((url, versionIri))
+                        break
+                else:
+                    if VERSION_IRI in line:
+                        versionIri = line.split(VERSION_IRI)[1].split('"')[0]
+                        urlAndVersions.append((url, versionIri))
+                        break
 
-        for url, versionIri in urlAndVersions:
-            docOntologyVersions[url] = versionIri
+    for url, versionIri in urlAndVersions:
+        docOntologyVersions[url] = versionIri
 
 
 def generateTermLabels(data, appData):
@@ -201,12 +207,14 @@ def addFileName(data):
         fileName = getFilenameFromUrl(fileUrl)
         setInDict(track, TRACK_FILE_URL_PATH[:-1] + [FILE_NAME], fileName)
 
+
 def addSpeciesName(data):
     samples = data[SAMPLES]
     for sample in samples:
         speciesId = getFromDict(sample, SPECIES_ID_PATH)
         speciesName = getSpeciesNameFromId(speciesId)
         setInDict(sample, SPECIES_NAME_PATH, speciesName)
+
 
 @functools.lru_cache(maxsize=1000)
 def getSpeciesNameFromId(speciesId):
@@ -229,15 +237,21 @@ def getSpeciesName(speciesId, providerCode):
     if providerCode == 'ncbi':
         url = NCBI_TAXONOMY_RESOLVER_URL + '&id=' + str(speciesId)
 
-        responseJson = requests.get(url).json()
-        speciesName = responseJson['result'][speciesId]['scientificname']
+        for i in range(3):
+            try:
+                responseJson = requests.get(url).json()
+                speciesName = responseJson['result'][speciesId]['scientificname']
+                break
+            except KeyError:
+                pass
 
         return speciesName
 
 
 def setAugmentedDataFlag(data):
-    if DOC_INFO in data:
-        data[DOC_INFO][HAS_AUGMENTED_METADATA] = True
+    for docInfoName in HAS_AUGMENTED_METADATA.keys():
+        if docInfoName in data:
+            data[docInfoName][HAS_AUGMENTED_METADATA[docInfoName]] = True
 
 
 def augmentFields(data, appData):
