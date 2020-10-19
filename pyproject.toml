@@ -1,0 +1,39 @@
+[tool.poetry]
+name = "fairtracks_augment"
+version = "2.0.0"
+description = "The FAIRtracks draft standard is a set of JSON Schemas that define a minimal standard for genomic track metadata. The FAIRtracks augmentation service is a simple Flask-based service written in Python that provides a HTTP-based API for augmenting a minimal FAIRtracks JSON document with automatically generated content for all the properties defined in the FAIRtracks JSON schemas with augmented=true."
+authors = ["Radmila Kompova <radmilak@ifi.uio.no>, Sveinung Gundersen <sveinugu@gmail.com>"]
+maintainers = ["Sveinung Gundersen <sveinugu@gmail.com>"]
+license = "Apache-2.0"
+readme = "README.md"
+homepage = "https://fairtracks.github.io/"
+repository = "https://github.com/fairtracks/fairtracks_augment"
+classifiers = [
+    "Framework :: Flask",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics"
+]
+
+[tool.poetry.dependencies]
+python = ">=3.6"
+pyyaml = "^5.3.1"
+cython = "^0.29.21"
+flask = "^1.1.2"
+requests = "^2.24.0"
+Owlready2 = "^0.24"
+CacheControl = {version = "^0.12.6", extras = ["filecache"]}
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.0.2"
+requests-mock = "^1.8.0"
+
+[tool.poetry.urls]
+issues = "https://github.com/fairtracks/fairtracks_augment/issues"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+#[tool.poetry.scripts]
+#run = "wsgi:main"
+
