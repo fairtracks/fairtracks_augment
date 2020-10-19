@@ -1,0 +1,168 @@
+{
+    "@schema": "https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/current/json/schema/fairtracks.schema.json",
+    "doc_info": {
+        "local_id": "0",
+        "doc_url": "https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/1.0.2/json/examples/fairtracks.example.json",
+        "doc_version": "9e9fa2d46112ada6c64c161c9587613cd778ec042ba65740265da1a3e8a34224",
+        "doc_date": "2020-07-07T19:02:59Z"
+    },
+    "collection_info": {
+        "source_repo_url": "https://www.encodeproject.org/search",
+        "local_id": "encode_example",
+        "doc_ref": "0",
+        "short_name": "ENCODE example",
+        "long_name": "Example of a few tracks created by from the ENCODE Project",
+        "description_url": "https://www.encodeproject.org/help/project-overview/",
+        "orig_metadata_url": "https://www.encodeproject.org/search/?format=json",
+        "contact": {
+            "name": "ENCODE DCC",
+            "e-mail": "encode-help@lists.stanford.edu"
+        }
+    },
+    "studies": [
+        {
+            "global_id": "geo:GSE35583",
+            "local_id": "UW_ChipSeq",
+            "collection_ref": "encode_example",
+            "study_name": "Histone Modifications by ChIP-seq from ENCODE/University of Washington",
+            "publication": "pubmed:22955617",
+            "contact": {
+                "name": "ENCODE DCC",
+                "e-mail": "encode-help@lists.stanford.edu"
+            }
+        }
+    ],
+    "experiments": [
+        {
+            "global_id": "geo:GSE35583",
+            "local_id": "encode:ENCSR000DQP",
+            "study_ref": "UW_ChipSeq",
+            "sample_ref": "geo:GSM945229",
+            "technique": {
+                "term_id": "http://purl.obolibrary.org/obo/OBI_0002017"
+            },
+            "target": {
+                "sequence_feature": {
+                    "term_id": "http://purl.obolibrary.org/obo/SO_0001706"
+                }
+            },
+            "lab_protocol_description": "https://www.encodeproject.org/documents/8f459e88-6344-434f-8f9f-6375a9ff1880/@@download/attachment/CD20%2B_Stam_protocol.pdf",
+            "compute_protocol_description": "https://www.encodeproject.org/documents/6f6351d4-9310-4a3b-a3c2-70ecac47b28b/@@download/attachment/ChIP-seq_Mapping_Pipeline_Overview.pdf"
+        }
+    ],
+    "samples": [
+        {
+            "global_id": "biosample:SAMN01731491",
+            "local_id": "geo:GSM945229",
+            "species_id": "taxonomy:9606",
+            "biospecimen_class": {
+                "term_id": "http://purl.obolibrary.org/obo/NCIT_C16403",
+            },
+            "sample_type": {
+                "cell_line": {
+                    "term_id": "http://www.ebi.ac.uk/efo/EFO_0003042",
+                },
+                "organism_part": {
+                    "term_id": "http://purl.obolibrary.org/obo/UBERON_0000922",
+                }
+            },
+            "phenotype": {
+                "term_id": "http://purl.obolibrary.org/obo/NCIT_C14165",
+            }
+        }
+    ],
+    "tracks": [
+        {
+            "global_id": "fairtracks:1",
+            "local_id": "encode:ENCFF625ZYB",
+            "assembly_id": "insdc.gca:GCF_000001405.26",
+            "assembly_name": "hg38",
+            "experiment_ref": "encode:ENCSR000DQP",
+            "raw_file_ids": [
+                "encode: ENCFF207FGO",
+                "encode:ENCFF842FEQ"
+            ],
+            "file_url": "https://www.encodeproject.org/files/ENCFF625ZYB/@@download/ENCFF625ZYB.bed.gz",
+            "label_short": "ENCFF625ZYB",
+            "label_long": "H3K4me3 ChIP-seq of B cell peaks rep1 ENCSR000DQP - ENCFF625ZYB",
+            "file_format": {
+                "term_id": "http://edamontology.org/format_3613"
+            },
+            "type_of_condensed_data": "Narrow peaks",
+            "geometric_track_type": "Segments",
+            "checksum": {
+                "cs_method": "MD5",
+                "cs_hash": "0ab98dbd2a2193ab3e09df030ea4f934"
+            }
+        },
+        {
+            "global_id": "fairtracks:2",
+            "local_id": "encode:ENCFF718EPO",
+            "assembly_id": "insdc.gca:GCF_000001405.26",
+            "assembly_name": "hg38",
+            "experiment_ref": "encode:ENCSR000DQP",
+            "raw_file_ids": [
+                "encode:ENCFF207FGO",
+                "encode:ENCFF842FEQ"
+            ],
+            "file_url": "https://www.encodeproject.org/files/ENCFF718EPO/@@download/ENCFF718EPO.bigBed",
+            "label_short": "ENCFF718EPO",
+            "label_long": "H3K4me3 ChIP-seq of B cell peaks rep1 ENCSR000DQP - ENCFF718EPO",
+            "file_format": {
+                "term_id": "http://edamontology.org/format_3004"
+            },
+            "type_of_condensed_data": "Narrow peaks",
+            "geometric_track_type": "Segments",
+            "checksum": {
+                "cs_method": "MD5",
+                "cs_hash": "6d2c6c99a7407f1c49ab163e41d9b575"
+            }
+        },
+        {
+            "global_id": "fairtracks:3",
+            "local_id": "encode:ENCFF717PIO",
+            "assembly_id": "insdc.gca:GCF_000001405.26",
+            "assembly_name": "hg38",
+            "experiment_ref": "encode:ENCSR000DQP",
+            "raw_file_ids": [
+                "encode:ENCFF207FGO",
+                "encode:ENCFF842FEQ"
+            ],
+            "file_url": "https://www.encodeproject.org/files/ENCFF717PIO/@@download/ENCFF717PIO.bigWig",
+            "label_short": "ENCFF717PIO",
+            "label_long": "H3K4me3 ChIP-seq of B cell fold change over control rep1 ENCSR000DQP - ENCFF717PIO",
+            "file_format": {
+                "term_id": "http://edamontology.org/format_3006"
+            },
+            "type_of_condensed_data": "Signal values (fold change)",
+            "geometric_track_type": "Step function",
+            "checksum": {
+                "cs_method": "MD5",
+                "cs_hash": "550ae974bf94f1deb1676613ab24a5da"
+            }
+        },
+        {
+            "global_id": "fairtracks:4",
+            "local_id": "encode:ENCFF955LOC",
+            "assembly_id": "insdc.gca:GCF_000001405.26",
+            "assembly_name": "hg38",
+            "experiment_ref": "encode:ENCSR000DQP",
+            "raw_file_ids": [
+                "encode:ENCFF207FGO",
+                "encode:ENCFF842FEQ"
+            ],
+            "file_url": "https://www.encodeproject.org/files/ENCFF955LOC/@@download/ENCFF955LOC.bigWig",
+            "label_short": " ENCFF955LOC",
+            "label_long": "H3K4me3 ChIP-seq of B cell signal p-value rep1 ENCSR000DQP - ENCFF955LOC",
+            "file_format": {
+                "term_id": "http://edamontology.org/format_3006"
+            },
+            "type_of_condensed_data": "Signal values (p-value)",
+            "geometric_track_type": "Step function",
+            "checksum": {
+                "cs_method": "MD5",
+                "cs_hash": "942ea96e86313d4338cf3fd020882c4d"
+            }
+        }
+    ]
+}
