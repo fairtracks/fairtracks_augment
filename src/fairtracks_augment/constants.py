@@ -1,3 +1,5 @@
+import os
+from pathlib import Path
 
 TRACKS = 'tracks'
 STUDIES = 'studies'
@@ -44,9 +46,13 @@ EXPERIMENT_TARGET_PATHS = [['target', 'sequence_feature', 'term_label'], ['targe
 TARGET_DETAILS_PATH = ['target', 'details']
 TARGET_SUMMARY_PATH = ['target', 'summary']
 TRACK_FILE_URL_PATH = ['file_url']
+TRACK_FILE_NAME_PATH = ['file_name']
 SPECIES_ID_PATH = ['species_id']
 SPECIES_NAME_PATH = ['species_name']
 
-ONTOLOGY_FOLDER_PATH = 'ontologies'
+NUM_DOWNLOAD_RETRIES = 3
+DEFAULT_USERDATA_DIR = os.path.join(Path.home(), '.fairtracks_augment')
+ONTOLOGY_DIR = 'ontologies'
+ONTOLOGY_METADATA_FILE = 'ontologies.yaml'
 
 RESOLVED_RESOURCES = 'resolvedResources'
