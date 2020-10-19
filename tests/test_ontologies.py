@@ -29,12 +29,12 @@ def get_all_owl_urls(owl_id_list):
 
 
 def assert_helper_info_for_owl_id(helper, owl_id):
-    assert helper.getVersionIriForOntology(get_owl_url(owl_id)) == VERSION_IRI_FOR_ASSERTS[owl_id]
-    assert helper.getETagForOntology(get_owl_url(owl_id)) == owl_id.version
+    assert helper.get_version_iri_for_ontology(get_owl_url(owl_id)) == VERSION_IRI_FOR_ASSERTS[owl_id]
+    assert helper.get_etag_for_ontology(get_owl_url(owl_id)) == owl_id.version
 
 
 def assert_helper_info_for_all_owl_ids(helper, owl_id_list):
-    assert helper.allOntologyUrls() == get_all_owl_urls(owl_id_list)
+    assert helper.all_ontology_urls() == get_all_owl_urls(owl_id_list)
     for owl_id in owl_id_list:
         assert_helper_info_for_owl_id(helper, owl_id)
 
@@ -54,20 +54,20 @@ def stage_owl_and_get_url(request, requests_mock):
 @fixture
 def get_new_ontology_helper(tmp_path):
     def _get_new_ontology_helper():
-        return OntologyHelper(userDataDir=tmp_path.resolve())
+        return OntologyHelper(user_data_dir=tmp_path.resolve())
 
     return _get_new_ontology_helper
 
 
 @fixture
 def install_old_owl_files(stage_owl_and_get_url, get_new_ontology_helper):
-    ontologyHelper = get_new_ontology_helper()
+    ontology_helper = get_new_ontology_helper()
     omo_id_old = OwlId('omo', 'old')
     cdao_id_old = OwlId('cdao', 'old')
 
-    ontologyHelper.installOrUpdateOntology(stage_owl_and_get_url(omo_id_old))
-    ontologyHelper.installOrUpdateOntology(stage_owl_and_get_url(cdao_id_old))
-    ontologyHelper.store()
+    ontology_helper.install_or_update_ontology(stage_owl_and_get_url(omo_id_old))
+    ontology_helper.install_or_update_ontology(stage_owl_and_get_url(cdao_id_old))
+    ontology_helper.store()
 
     return [omo_id_old, cdao_id_old]
 
@@ -75,15 +75,15 @@ def install_old_owl_files(stage_owl_and_get_url, get_new_ontology_helper):
 def test_install_ontology(stage_owl_and_get_url, get_new_ontology_helper, tmp_path):
     helper = get_new_ontology_helper()
 
-    assert list(helper.allOntologyUrls()) == []
+    assert list(helper.all_ontology_urls()) == []
     assert os.path.exists(os.path.join(tmp_path.resolve(), ONTOLOGY_DIR))
 
     omo_id_old = OwlId('omo', 'old')
-    helper.installOrUpdateOntology(stage_owl_and_get_url(omo_id_old))
+    helper.install_or_update_ontology(stage_owl_and_get_url(omo_id_old))
     assert_helper_info_for_all_owl_ids(helper, [omo_id_old])
 
     cdao_id_old = OwlId('cdao', 'old')
-    helper.installOrUpdateOntology(stage_owl_and_get_url(cdao_id_old))
+    helper.install_or_update_ontology(stage_owl_and_get_url(cdao_id_old))
     assert_helper_info_for_all_owl_ids(helper, [omo_id_old, cdao_id_old])
 
 

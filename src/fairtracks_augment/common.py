@@ -5,45 +5,46 @@ import json
 import urllib.request
 
 
-def getPathsToElement(elName, url=None, data=None, path=[], schemas={}):
+def get_paths_to_element(el_name, url=None, data=None, path=[], schemas={}):
     assert (url is not None or data is not None)
 
     if data is None:
         print(url)
         data = json.load(urllib.request.urlopen(url))
-        schemaFn = url.split('/')[-1]
-        schemas[schemaFn] = data
+        schema_fn = url.split('/')[-1]
+        schemas[schema_fn] = data
 
     if isinstance(data, dict):
         for key, val in data.items():
-            newPath = copy(path)
-            newUrl = url
+            new_path = copy(path)
+            new_url = url
 
             if key == '$ref':
                 if val in schemas:
                     data = schemas[val]
                 else:
-                    newUrl = '/'.join([url.rsplit('/', 1)[0], val])
+                    new_url = '/'.join([url.rsplit('/', 1)[0], val])
                     data = None
             else:
-                newPath.append(key)
+                new_path.append(key)
                 data = val
 
-            if key == elName:
-                yield url, newPath, val
+            if key == el_name:
+                yield url, new_path, val
             else:
-                for _ in getPathsToElement(elName, newUrl, data, newPath, schemas):
+                for _ in get_paths_to_element(el_name, new_url, data, new_path, schemas):
                     yield _
+
     elif isinstance(data, Iterable):
         for i, item in enumerate(data):
-            for _ in getPathsToElement(elName, url, item, path + [i], schemas):
+            for _ in get_paths_to_element(el_name, url, item, path + [i], schemas):
                 yield _
 
 
-def getFilenameFromUrl(url):
+def get_filename_from_url(url):
     return url.rsplit('/', 1)[-1]
 
 
-def makeStrPathFromList(path, category):
+def make_str_path_from_list(path, category):
     return '->'.join([category] + path)
 

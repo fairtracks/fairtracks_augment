@@ -3,7 +3,7 @@ import json
 import tempfile
 import urllib
 
-from fairtracks_augment.common import getPathsToElement
+from fairtracks_augment.common import get_paths_to_element
 from fairtracks_augment.constants import ONTOLOGY, PROPERTIES, TERM_ID, \
     ITEMS, TOP_SCHEMA_FN, SCHEMA_URL_PART1, SCHEMA_URL_PART2
 from fairtracks_augment.nested_ordered_dict import NestedOrderedDict
@@ -11,76 +11,78 @@ from fairtracks_augment.ontologies import OntologyHelper
 
 
 class AppData:
-    def __init__(self, data=None, tmpDir=None):
+    def __init__(self, data=None, tmp_dir=None):
         print("initializing ontologies...")
 
-        self.ontologyHelper = OntologyHelper()
-        self._pathsWithOntologyUrls = []
+        self.ontology_helper = OntologyHelper()
+        self._paths_with_ontology_urls = []
 
         if data is None:
             data = NestedOrderedDict()
-            data["@schema"] = self._getCurrentSchemaUrl()
+            data["@schema"] = self._get_current_schema_url()
 
-        if tmpDir:
+        if tmp_dir:
             schemas = {}
-            for filename in os.listdir(tmpDir):
+            for filename in os.listdir(tmp_dir):
                 if filename.endswith(".json"):
-                    with open(os.path.join(tmpDir, filename)) as schemaFile:
-                        schema = json.load(schemaFile)
+                    with open(os.path.join(tmp_dir, filename)) as schema_file:
+                        schema = json.load(schema_file)
                         schemas[filename] = schema
 
-            pathsToElement = getPathsToElement(TERM_ID, data=schemas[TOP_SCHEMA_FN], schemas=schemas)
+            paths_to_element = get_paths_to_element(TERM_ID, data=schemas[TOP_SCHEMA_FN],
+                                                    schemas=schemas)
         else:
-            schemaUrl = data['@schema']
-            pathsToElement = getPathsToElement(TERM_ID, url=schemaUrl)
+            schema_url = data['@schema']
+            paths_to_element = get_paths_to_element(TERM_ID, url=schema_url)
 
-        self._pathsWithOntologyUrls = self._extractPathsAndOntologyUrlsFromSchema(pathsToElement)
-        self._installAllOntologies()
+        self._paths_with_ontology_urls = \
+            self._extract_paths_and_ontology_urls_from_schema(paths_to_element)
+        self._install_all_ontologies()
 
     @staticmethod
-    def _getCurrentSchemaUrl():
+    def _get_current_schema_url():
         i = 1
-        currentSchemaUrl = None
-        with tempfile.TemporaryDirectory() as tmpDir:
+        current_schema_url = None
+        with tempfile.TemporaryDirectory() as tmp_dir:
             while True:
-                schemaUrl = SCHEMA_URL_PART1 + "v" + str(i) + SCHEMA_URL_PART2
+                schema_url = SCHEMA_URL_PART1 + "v" + str(i) + SCHEMA_URL_PART2
                 try:
-                    schemaFn, _ = urllib.request.urlretrieve(schemaUrl,
-                                                             os.path.join(tmpDir, 'schema.json'))
-                    currentSchemaUrl = schemaUrl
+                    schema_fn, _ = urllib.request.urlretrieve(schema_url,
+                                                              os.path.join(tmp_dir, 'schema.json'))
+                    current_schema_url = schema_url
                     i += 1
                 except:
                     break
-        return currentSchemaUrl
+        return current_schema_url
 
-    def getPathsWithOntologyUrls(self):
-        return self._pathsWithOntologyUrls
+    def get_paths_with_ontology_urls(self):
+        return self._paths_with_ontology_urls
 
-    def _extractPathsAndOntologyUrlsFromSchema(self, pathsToElement):
-        pathsAndUrls = []
+    def _extract_paths_and_ontology_urls_from_schema(self, paths_to_element):
+        paths_and_urls = []
 
-        for url, path, val in pathsToElement:
-            ontologyUrls = []
+        for url, path, val in paths_to_element:
+            ontology_urls = []
             if ONTOLOGY in val:
-                ontologyUrls = val[ONTOLOGY]
-                if not isinstance(ontologyUrls, list):
-                    ontologyUrls = [ontologyUrls]
-            newPath = self._cleanupElementPath(path)
-            if ontologyUrls:
-                pathsAndUrls.append((newPath, ontologyUrls))
+                ontology_urls = val[ONTOLOGY]
+                if not isinstance(ontology_urls, list):
+                    ontology_urls = [ontology_urls]
+            new_path = self._cleanup_element_path(path)
+            if ontology_urls:
+                paths_and_urls.append((new_path, ontology_urls))
 
-        return pathsAndUrls
+        return paths_and_urls
 
-    def _cleanupElementPath(self, path):
+    def _cleanup_element_path(self, path):
         return [p for p in path if p != PROPERTIES and p != ITEMS]
 
-    def _installAllOntologies(self):
-        for ontologyUrl in self._getAllOntologyUrls():
-            self.ontologyHelper.installOrUpdateOntology(ontologyUrl)
+    def _install_all_ontologies(self):
+        for ontology_url in self._get_all_ontology_urls():
+            self.ontology_helper.install_or_update_ontology(ontology_url)
 
-    def _getAllOntologyUrls(self):
-        ontologyUrls = set()
-        for path, ontoUrls in self._pathsWithOntologyUrls:
-            for ontoUrl in ontoUrls:
-                ontologyUrls.add(ontoUrl)
-        return list(ontologyUrls)
+    def _get_all_ontology_urls(self):
+        ontology_urls = set()
+        for path, onto_urls in self._paths_with_ontology_urls:
+            for onto_url in onto_urls:
+                ontology_urls.add(onto_url)
+        return list(ontology_urls)
