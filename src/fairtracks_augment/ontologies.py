@@ -1,6 +1,5 @@
 import functools
 import shutil
-import urllib
 import os
 import owlready2
 import requests
@@ -64,9 +63,6 @@ class OntologyHelper(metaclass=ArgBasedSingleton):
         self._store_ontology_metadata()
         self._store_ontology_data()
 
-    def clear_storage(self):
-        shutil.rmtree(self._ontology_dir_path)
-
     def _ensure_ontology_dir_exists(self):
         if not os.path.exists(self._ontology_dir_path):
             os.makedirs(self._ontology_dir_path)
@@ -98,16 +94,17 @@ class OntologyHelper(metaclass=ArgBasedSingleton):
 
     def update_all_ontologies(self):
         for url in self.all_ontology_urls():
-            self._update_ontology(url)
+            self.update_ontology(url)
 
     def install_or_update_ontology(self, url):
         if url not in self._ontology_info_dict:
-            self._install_ontology(url)
+            self.install_ontology(url)
         else:
-            if self._does_ontology_need_update(url):
-                self._update_ontology(url)
+            self.update_ontology(url)
 
-    def _install_ontology(self, url):
+    def install_ontology(self, url):
+        self._assert_ontology_not_installed(url)
+
         self._register_ontology_info(url)
 
         print('downloading: ' + url)
@@ -122,8 +119,31 @@ class OntologyHelper(metaclass=ArgBasedSingleton):
         self._update_version_iri_from_owl_file(url)
         print('updated version IRI: ' + url)
 
+    def _assert_ontology_not_installed(self, url):
+        assert url not in self._ontology_info_dict
+        assert url not in self._ontologies
+
+    def _assert_ontology_installed(self, url):
+        assert url in self._ontology_info_dict
+        assert url in self._ontologies
+
+    def update_ontology(self, url):
+        self._assert_ontology_installed(url)
+
+        if self._does_ontology_need_update(url):
+            self.delete_ontology(url)
+            self.install_ontology(url)
+            return True
+        else:
+            return False
+
+    def _does_ontology_need_update(self, url):
+        with requests.get(url) as response:
+            return response.headers.get('etag') != self._ontology_info_dict[url].etag
+
     def _register_ontology_info(self, url):
-        self._ontology_info_dict[url] = self.OntologyInfo.create_from_url(self._ontology_dir_path, url)
+        self._ontology_info_dict[url] = \
+            self.OntologyInfo.create_from_url(self._ontology_dir_path, url)
 
     def _get_owl_file_path(self, url):
         return self._ontology_info_dict[url].get_owl_path()
@@ -171,27 +191,30 @@ class OntologyHelper(metaclass=ArgBasedSingleton):
                         return version_iri
             return None
 
+    def delete_ontology(self, url):
+        self._assert_ontology_installed(url)
+
+        print('deleting stored content for: ' + url)
+
+        ontology_info = self._ontology_info_dict[url]
+        del self._ontology_info_dict[url]
+
+        self._ontologies[url].close()
+        del self._ontologies[url]
+        os.unlink(ontology_info.get_owl_path())
+        os.unlink(ontology_info.get_db_path())
+
+        print('deleted stored content for: ' + url)
+
+    def delete_all_ontologies(self):
+        for url in self.all_ontology_urls():
+            self.delete_ontology(url)
+
     def get_version_iri_for_ontology(self, url):
         return self._ontology_info_dict[url].version_iri
 
     def get_etag_for_ontology(self, url):
         return self._ontology_info_dict[url].etag
-
-    def _does_ontology_need_update(self, url):
-        return True
-
-    def _update_ontology(self, url):
-        self._delete_ontology(url)
-        self._install_ontology(url)
-
-    def _delete_ontology(self, url):
-        del self._ontologies[url]
-
-        print('deleting stored content for: ' + url)
-        ontology_info = self.OntologyInfo.create_from_url(url)
-        os.unlink(ontology_info.get_owl_path())
-        os.unlink(ontology_info.get_db_path())
-        print('deleted stored content for: ' + url)
 
     def search_all_ontologies_for_term_id(self, term_id):
         return self.search_ontologies_for_term_id(self.all_ontology_urls(), term_id)
