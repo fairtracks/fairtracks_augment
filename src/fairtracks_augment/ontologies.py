@@ -1,16 +1,19 @@
 import functools
-import shutil
 import os
 import owlready2
 import requests
+import shutil
+import urllib3
 import yaml
 
+from cachecontrol import CacheControl, CacheControlAdapter
+from cachecontrol.caches import FileCache
 from urllib.parse import urlparse
 from yaml import YAMLObject
 
 from fairtracks_augment.constants import ONTOLOGY_METADATA_FILE, \
     EDAM_ONTOLOGY, DOAP_VERSION, VERSION_IRI, DEFAULT_USERDATA_DIR, ONTOLOGY_DIR, \
-    NUM_DOWNLOAD_RETRIES
+    NUM_DOWNLOAD_RETRIES, REQUEST_TIMEOUT, FILECACHE_DIR, BACKOFF_FACTOR
 
 
 class ArgBasedSingleton(type):
@@ -49,9 +52,11 @@ class OntologyHelper(metaclass=ArgBasedSingleton):
 
     def __init__(self, user_data_dir=DEFAULT_USERDATA_DIR):
         self._ontology_dir_path = os.path.join(user_data_dir, ONTOLOGY_DIR)
+        self._filecache_dir_path = os.path.join(user_data_dir, FILECACHE_DIR)
         self._metadata_yaml_path = os.path.join(self._ontology_dir_path, ONTOLOGY_METADATA_FILE)
 
-        self._ensure_ontology_dir_exists()
+        self._ensure_dir_exists(self._ontology_dir_path)
+        self._ensure_dir_exists(self._filecache_dir_path)
         self._ontology_info_dict = self._load_ontology_metadata()
         self._ontologies = {}
         self._load_ontology_data()
@@ -63,9 +68,10 @@ class OntologyHelper(metaclass=ArgBasedSingleton):
         self._store_ontology_metadata()
         self._store_ontology_data()
 
-    def _ensure_ontology_dir_exists(self):
-        if not os.path.exists(self._ontology_dir_path):
-            os.makedirs(self._ontology_dir_path)
+    @staticmethod
+    def _ensure_dir_exists(dir_path):
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
 
     def _load_ontology_metadata(self):
         if os.path.exists(self._metadata_yaml_path):
@@ -127,6 +133,10 @@ class OntologyHelper(metaclass=ArgBasedSingleton):
         assert url in self._ontology_info_dict
         assert url in self._ontologies
 
+    def _register_ontology_info(self, url):
+        self._ontology_info_dict[url] = \
+            self.OntologyInfo.create_from_url(self._ontology_dir_path, url)
+
     def update_ontology(self, url):
         self._assert_ontology_installed(url)
 
@@ -137,31 +147,48 @@ class OntologyHelper(metaclass=ArgBasedSingleton):
         else:
             return False
 
-    def _does_ontology_need_update(self, url):
-        with requests.get(url) as response:
-            return response.headers.get('etag') != self._ontology_info_dict[url].etag
+    def _http_get_request(self, url, callback_if_ok):
+        try:
+            retry_strategy = urllib3.Retry(
+                total=NUM_DOWNLOAD_RETRIES,
+                read=NUM_DOWNLOAD_RETRIES,
+                connect=NUM_DOWNLOAD_RETRIES,
+                status_forcelist=(429, 500, 502, 503, 504),
+                backoff_factor=BACKOFF_FACTOR
+            )
 
-    def _register_ontology_info(self, url):
-        self._ontology_info_dict[url] = \
-            self.OntologyInfo.create_from_url(self._ontology_dir_path, url)
+            def _create_cache_control_adapter(*args, **kwargs):
+                return CacheControlAdapter(*args, max_retries=retry_strategy, **kwargs)
+
+            session = requests.Session()
+            session = CacheControl(session, cache=FileCache(self._filecache_dir_path),
+                                   adapter_class=_create_cache_control_adapter)
+
+            with session.get(url, stream=True, timeout=REQUEST_TIMEOUT) as response:
+                response.raise_for_status()
+
+                if 'etag' not in response.headers:
+                    raise NotImplementedError('Ontology URL HTTP response without '
+                                              '"ETag" header is not supported')
+
+                return callback_if_ok(response)
+        except requests.exceptions.RequestException:
+            raise
+
+    def _does_ontology_need_update(self, url):
+        def _has_etag_changed_callback(response):
+            return response.headers.get('etag') != self._ontology_info_dict[url].etag
+        return self._http_get_request(url, callback_if_ok=_has_etag_changed_callback)
 
     def _get_owl_file_path(self, url):
         return self._ontology_info_dict[url].get_owl_path()
 
     def _download_owl_file(self, url):
-        for i in reversed(range(NUM_DOWNLOAD_RETRIES)):
-            try:
-                with requests.get(url, stream=True) as response:
-                    with open(self._get_owl_file_path(url), 'wb') as out_file:
-                        shutil.copyfileobj(response.raw, out_file)
-                        if 'etag' in response.headers:
-                            self._ontology_info_dict[url].etag = response.headers['etag']
-                        else:
-                            raise NotImplementedError('Ontology URL HTTP response without '
-                                                      '"ETag" header is not supported')
-            except requests.exceptions.RequestException:
-                if i == 0:
-                    raise
+        def _download_owl_file_callback(response):
+            self._ontology_info_dict[url].etag = response.headers['etag']
+            with open(self._get_owl_file_path(url), 'wb') as out_file:
+                shutil.copyfileobj(response.raw, out_file)
+        self._http_get_request(url, callback_if_ok=_download_owl_file_callback)
 
     def _parse_owl_file_into_db(self, url):
         self._ontologies[url].get_ontology(self._get_owl_file_path(url)).load()
@@ -169,8 +196,7 @@ class OntologyHelper(metaclass=ArgBasedSingleton):
     def _update_version_iri_from_owl_file(self, url):
         version_iri = self._extract_version_iri_from_owl_file(url)
         if not version_iri:
-            raise ValueError('Unable to extract versionIRI from owl file for ontology: '
-                             + version_iri)
+            raise ValueError('Unable to extract versionIRI from owl file for ontology: ' + url)
         self._ontology_info_dict[url].version_iri = version_iri
 
     def _extract_version_iri_from_owl_file(self, url):
@@ -180,6 +206,7 @@ class OntologyHelper(metaclass=ArgBasedSingleton):
 
         with open(self._get_owl_file_path(url), 'r') as owlFile:
             for line in owlFile:
+                # TODO: parse owl content for improved robustness
                 if edam:
                     if DOAP_VERSION in line:
                         version_number = line.split(DOAP_VERSION)[1].split('<')[0]

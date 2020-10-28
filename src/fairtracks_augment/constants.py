@@ -51,7 +51,10 @@ SPECIES_ID_PATH = ['species_id']
 SPECIES_NAME_PATH = ['species_name']
 
 NUM_DOWNLOAD_RETRIES = 3
+REQUEST_TIMEOUT = 10
+BACKOFF_FACTOR = 0
 DEFAULT_USERDATA_DIR = os.path.join(Path.home(), '.fairtracks_augment')
+FILECACHE_DIR = 'file_cache'
 ONTOLOGY_DIR = 'ontologies'
 ONTOLOGY_METADATA_FILE = 'ontologies.yaml'
 

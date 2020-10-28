@@ -25,7 +25,7 @@ CacheControl = {version = "^0.12.6", extras = ["filecache"]}
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.0.2"
-requests-mock = "^1.8.0"
+httpretty = "^1.0.2"
 
 [tool.poetry.urls]
 issues = "https://github.com/fairtracks/fairtracks_augment/issues"
