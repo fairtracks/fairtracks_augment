@@ -251,7 +251,7 @@ def test_cached_update(get_new_ontology_helper, stage_owl_and_get_url):
     # Test that cache is not used after expiration
     #
 
-    time.sleep(1)
+    time.sleep(1.2)
 
     with pytest.raises(requests.exceptions.HTTPError):
         helper.update_ontology(omo_old_url)
