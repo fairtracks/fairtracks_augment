@@ -26,9 +26,9 @@ OWL_METADATA_FOR_ASSERTS = {
     OwlId('omo', 'old'): OwlInfo('http://purl.obolibrary.org/obo/omo/2020-05-08/omo.owl',
                                  '594585592bd65f374afdd8cafec151fa'),
     OwlId('omo', 'new'): OwlInfo('http://purl.obolibrary.org/obo/omo/2020-06-08/omo.owl',
-                                 '41acd68b664b6a605067e15c4cdb4d0b'),
+                                 'a136b8434c8ca8b6deca03529b6f3a58'),
     OwlId('omo', 'maybe_newer'): OwlInfo('http://purl.obolibrary.org/obo/omo/2020-06-08/omo.owl',
-                                         '41acd68b664b6a605067e15c4cdb4d0b'),
+                                         'a136b8434c8ca8b6deca03529b6f3a58'),
     OwlId('hom', 'old'): OwlInfo('http://purl.obolibrary.org/obo/hom/releases/2015-01-07/hom.owl',
                                  'd3f7a3aabf82ce1f5cfc2112875eeba9')
 }
@@ -276,3 +276,52 @@ def test_cached_update(get_new_ontology_helper, stage_owl_and_get_url):
 
     assert_helper_info_for_all_owl_ids(helper, [omo_id_new])
     assert not updated
+
+
+@httpretty.activate
+def test_search_ontology(install_old_owl_files, get_new_ontology_helper, stage_owl_and_get_url):
+    all_old_urls = get_all_owl_urls(install_old_owl_files())
+    omo_url_old, hom_url_old = all_old_urls
+    helper = get_new_ontology_helper()
+
+    hom_term_id = "http://www.geneontology.org/formats/oboInOwl#NamespaceIdRule"
+    term_label = helper.search_ontology_for_term_id(hom_url_old, hom_term_id)
+    assert term_label == "namespace-id-rule"
+
+    omo_term_id = "http://purl.obolibrary.org/obo/IAO_0000111"
+    term_label = helper.search_ontologies_for_term_id(all_old_urls, omo_term_id)
+    assert term_label == "editor preferred term"
+
+    helper.update_ontology(stage_owl_and_get_url(OwlId('omo', 'new')))
+    term_label = helper.search_all_ontologies_for_term_id(omo_term_id)
+    assert term_label == "what I like to call it"
+
+
+@httpretty.activate
+def test_search_ontology_error_cases(install_old_owl_files, get_new_ontology_helper):
+    all_urls = get_all_owl_urls(install_old_owl_files())
+    omo_url_old, hom_url_old = all_urls
+    helper = get_new_ontology_helper()
+
+    omo_term_id_missing = "http://purl.obolibrary.org/obo/IAO_0000110"
+    term_label = helper.search_ontology_for_term_id(omo_url_old, omo_term_id_missing)
+    assert term_label is None
+
+    term_label = helper.search_ontologies_for_term_id(all_urls, omo_term_id_missing)
+    assert term_label is None
+
+    term_label = helper.search_all_ontologies_for_term_id(omo_term_id_missing)
+    assert term_label is None
+
+    hom_term_id_no_label = "http://www.geneontology.org/formats/oboInOwl#auto-generated-by"
+    with pytest.raises(ValueError):
+        helper.search_ontology_for_term_id(hom_url_old, hom_term_id_no_label)
+
+    with pytest.raises(ValueError):
+        helper.search_ontologies_for_term_id(all_urls, hom_term_id_no_label)
+
+    with pytest.raises(ValueError):
+        helper.search_all_ontologies_for_term_id(hom_term_id_no_label)
+
+
+

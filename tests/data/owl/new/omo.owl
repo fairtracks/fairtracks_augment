@@ -81,7 +81,7 @@
         <obo:IAO_0000115 xml:lang="en">The concise, meaningful, and human-friendly name for a class or property preferred by the ontology developers. (US-English)</obo:IAO_0000115>
         <obo:IAO_0000117 xml:lang="en">PERSON:Daniel Schober</obo:IAO_0000117>
         <obo:IAO_0000119 xml:lang="en">GROUP:OBI:&lt;http://purl.obolibrary.org/obo/obi&gt;</obo:IAO_0000119>
-        <rdfs:label xml:lang="en">editor preferred term</rdfs:label>
+        <rdfs:label xml:lang="en">what I like to call it</rdfs:label>
     </owl:AnnotationProperty>
     
 

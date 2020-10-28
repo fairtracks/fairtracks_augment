@@ -247,8 +247,8 @@ class OntologyHelper(metaclass=ArgBasedSingleton):
         return self.search_ontologies_for_term_id(self.all_ontology_urls(), term_id)
 
     def search_ontologies_for_term_id(self, ontology_url_list, term_id):
-        for ontologyUrl in ontology_url_list:
-            term_label = self.search_ontology_for_term_id(ontologyUrl, term_id)
+        for ontology_url in ontology_url_list:
+            term_label = self.search_ontology_for_term_id(ontology_url, term_id)
             if term_label:
                 return term_label
         return None
@@ -263,8 +263,16 @@ class OntologyHelper(metaclass=ArgBasedSingleton):
         assert ontology_url in self._ontologies
         assert version_iri == self.get_version_iri_for_ontology(ontology_url)
 
-        termLabel = self._ontologies[ontology_url].search(iri=term_id)
-        if termLabel:
-            return termLabel[0].label[0]
+        terms_found = self._ontologies[ontology_url].search(iri=term_id)
+        if terms_found:
+            assert len(terms_found) == 1
+            try:
+                return terms_found[0].label[0]
+            except (AttributeError, IndexError):
+                raise ValueError(
+                    'Term ID "{}" was not registered with a label in ontology "{}"'.format(
+                        term_id, ontology_url
+                    )
+                )
         else:
             return None
