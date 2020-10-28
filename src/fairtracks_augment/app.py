@@ -66,7 +66,7 @@ def augment():
 
 
 def add_ontology_versions(data, app_data):
-    # Very cumbersome way to support both v1 and v21111 names. Should be
+    # Very cumbersome way to support both v1 and v2 names. Should be
     # refactored. Also no good error message if no document info property is
     # found. 
     # Possibility: store property names in App subclasses instead of
