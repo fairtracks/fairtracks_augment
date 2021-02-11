@@ -1,29 +1,14 @@
 import functools
 import os
 import owlready2
-import requests
 import shutil
-import urllib3
 import yaml
 
-from cachecontrol import CacheControl, CacheControlAdapter
-from cachecontrol.caches import FileCache
 from urllib.parse import urlparse
 from yaml import YAMLObject
 
-from fairtracks_augment.constants import ONTOLOGY_METADATA_FILE, \
-    EDAM_ONTOLOGY, DOAP_VERSION, VERSION_IRI, DEFAULT_USERDATA_DIR, ONTOLOGY_DIR, \
-    NUM_DOWNLOAD_RETRIES, REQUEST_TIMEOUT, FILECACHE_DIR, BACKOFF_FACTOR
-
-
-class ArgBasedSingleton(type):
-    _instances = dict()
-
-    def __call__(cls, **kwargs):
-        args_as_tuple = tuple(kwargs.items())
-        if args_as_tuple not in cls._instances:
-            cls._instances[args_as_tuple] = super(ArgBasedSingleton, cls).__call__(**kwargs)
-        return cls._instances[args_as_tuple]
+from fairtracks_augment.common import http_get_request, ArgBasedSingleton
+from fairtracks_augment.constants import EDAM_ONTOLOGY, DOAP_VERSION, VERSION_IRI
 
 
 class OntologyHelper(metaclass=ArgBasedSingleton):
@@ -50,13 +35,8 @@ class OntologyHelper(metaclass=ArgBasedSingleton):
         def get_owl_path(self):
             return os.path.join(self._ontology_dir_path, self.owl_filename)
 
-    def __init__(self, user_data_dir=DEFAULT_USERDATA_DIR):
-        self._ontology_dir_path = os.path.join(user_data_dir, ONTOLOGY_DIR)
-        self._filecache_dir_path = os.path.join(user_data_dir, FILECACHE_DIR)
-        self._metadata_yaml_path = os.path.join(self._ontology_dir_path, ONTOLOGY_METADATA_FILE)
-
-        self._ensure_dir_exists(self._ontology_dir_path)
-        self._ensure_dir_exists(self._filecache_dir_path)
+    def __init__(self, config):
+        self._config = config
         self._ontology_info_dict = self._load_ontology_metadata()
         self._ontologies = {}
         self._load_ontology_data()
@@ -68,19 +48,14 @@ class OntologyHelper(metaclass=ArgBasedSingleton):
         self._store_ontology_metadata()
         self._store_ontology_data()
 
-    @staticmethod
-    def _ensure_dir_exists(dir_path):
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
-
     def _load_ontology_metadata(self):
-        if os.path.exists(self._metadata_yaml_path):
-            with open(self._metadata_yaml_path, 'r') as yaml_file:
+        if os.path.exists(self._config.metadata_yaml_path):
+            with open(self._config.metadata_yaml_path, 'r') as yaml_file:
                 return yaml.safe_load(yaml_file)
         return {}
 
     def _store_ontology_metadata(self):
-        with open(self._metadata_yaml_path, 'w') as yaml_file:
+        with open(self._config.metadata_yaml_path, 'w') as yaml_file:
             yaml.dump(self._ontology_info_dict, yaml_file)
 
     def _load_ontology_data(self):
@@ -135,7 +110,7 @@ class OntologyHelper(metaclass=ArgBasedSingleton):
 
     def _register_ontology_info(self, url):
         self._ontology_info_dict[url] = \
-            self.OntologyInfo.create_from_url(self._ontology_dir_path, url)
+            self.OntologyInfo.create_from_url(self._config.ontology_dir_path, url)
 
     def update_ontology(self, url):
         self._assert_ontology_installed(url)
@@ -147,38 +122,11 @@ class OntologyHelper(metaclass=ArgBasedSingleton):
         else:
             return False
 
-    def _http_get_request(self, url, callback_if_ok):
-        try:
-            retry_strategy = urllib3.Retry(
-                total=NUM_DOWNLOAD_RETRIES,
-                read=NUM_DOWNLOAD_RETRIES,
-                connect=NUM_DOWNLOAD_RETRIES,
-                status_forcelist=(429, 500, 502, 503, 504),
-                backoff_factor=BACKOFF_FACTOR
-            )
-
-            def _create_cache_control_adapter(*args, **kwargs):
-                return CacheControlAdapter(*args, max_retries=retry_strategy, **kwargs)
-
-            session = requests.Session()
-            session = CacheControl(session, cache=FileCache(self._filecache_dir_path),
-                                   adapter_class=_create_cache_control_adapter)
-
-            with session.get(url, stream=True, timeout=REQUEST_TIMEOUT) as response:
-                response.raise_for_status()
-
-                if 'etag' not in response.headers:
-                    raise NotImplementedError('Ontology URL HTTP response without '
-                                              '"ETag" header is not supported')
-
-                return callback_if_ok(response)
-        except requests.exceptions.RequestException:
-            raise
-
     def _does_ontology_need_update(self, url):
         def _has_etag_changed_callback(response):
             return response.headers.get('etag') != self._ontology_info_dict[url].etag
-        return self._http_get_request(url, callback_if_ok=_has_etag_changed_callback)
+        return http_get_request(self._config.filecache_dir_path, url,
+                                callback_if_ok=_has_etag_changed_callback, require_etag=True)
 
     def _get_owl_file_path(self, url):
         return self._ontology_info_dict[url].get_owl_path()
@@ -188,7 +136,8 @@ class OntologyHelper(metaclass=ArgBasedSingleton):
             self._ontology_info_dict[url].etag = response.headers['etag']
             with open(self._get_owl_file_path(url), 'wb') as out_file:
                 shutil.copyfileobj(response.raw, out_file)
-        self._http_get_request(url, callback_if_ok=_download_owl_file_callback)
+        http_get_request(self._config.filecache_dir_path, url,
+                         callback_if_ok=_download_owl_file_callback, require_etag=True)
 
     def _parse_owl_file_into_db(self, url):
         self._ontologies[url].get_ontology(self._get_owl_file_path(url)).load()

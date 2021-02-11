@@ -4,6 +4,13 @@ from copy import copy
 import json
 import urllib.request
 
+import requests
+import urllib3
+from cachecontrol import CacheControl, CacheControlAdapter
+from cachecontrol.caches import FileCache
+
+from fairtracks_augment.constants import NUM_DOWNLOAD_RETRIES, BACKOFF_FACTOR, REQUEST_TIMEOUT
+
 
 def get_paths_to_element(el_name, url=None, data=None, path=[], schemas={}):
     assert (url is not None or data is not None)
@@ -48,3 +55,41 @@ def get_filename_from_url(url):
 def make_str_path_from_list(path, category):
     return '->'.join([category] + path)
 
+
+def http_get_request(filecache_dir_path, url, callback_if_ok, require_etag=False):
+    try:
+        retry_strategy = urllib3.Retry(
+            total=NUM_DOWNLOAD_RETRIES,
+            read=NUM_DOWNLOAD_RETRIES,
+            connect=NUM_DOWNLOAD_RETRIES,
+            status_forcelist=(429, 500, 502, 503, 504),
+            backoff_factor=BACKOFF_FACTOR
+        )
+
+        def _create_cache_control_adapter(*args, **kwargs):
+            return CacheControlAdapter(*args, max_retries=retry_strategy, **kwargs)
+
+        session = requests.Session()
+        session = CacheControl(session, cache=FileCache(filecache_dir_path),
+                               adapter_class=_create_cache_control_adapter)
+
+        with session.get(url, stream=True, timeout=REQUEST_TIMEOUT) as response:
+            response.raise_for_status()
+
+            if require_etag and 'etag' not in response.headers:
+                raise NotImplementedError('URL HTTP response without '
+                                          '"ETag" header is not supported')
+
+            return callback_if_ok(response)
+    except requests.exceptions.RequestException:
+        raise
+
+
+class ArgBasedSingleton(type):
+    _instances = dict()
+
+    def __call__(cls, **kwargs):
+        args_as_tuple = tuple(kwargs.items())
+        if args_as_tuple not in cls._instances:
+            cls._instances[args_as_tuple] = super(ArgBasedSingleton, cls).__call__(**kwargs)
+        return cls._instances[args_as_tuple]

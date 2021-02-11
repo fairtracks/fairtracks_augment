@@ -4,6 +4,7 @@ import tempfile
 import urllib
 
 from fairtracks_augment.common import get_paths_to_element
+from fairtracks_augment.config import Config
 from fairtracks_augment.constants import ONTOLOGY, PROPERTIES, TERM_ID, \
     ITEMS, TOP_SCHEMA_FN, SCHEMA_URL_PART1, SCHEMA_URL_PART2
 from fairtracks_augment.nested_ordered_dict import NestedOrderedDict
@@ -14,7 +15,8 @@ class AppData:
     def __init__(self, data=None, tmp_dir=None):
         print("initializing ontologies...")
 
-        self.ontology_helper = OntologyHelper()
+        self.config = Config()
+        self.ontology_helper = OntologyHelper(self.config)
         self._paths_with_ontology_urls = []
 
         if data is None:

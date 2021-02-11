@@ -15,8 +15,8 @@ from http import HTTPStatus
 from httpretty import Response, HTTPretty
 from pathlib import Path
 
-from fairtracks_augment.constants import ONTOLOGY_DIR
-from fairtracks_augment.ontologies import OntologyHelper, ArgBasedSingleton
+from fairtracks_augment.config import Config, ONTOLOGY_DIR
+from fairtracks_augment.ontologies import OntologyHelper
 
 OwlId = namedtuple('OwlId', ('name', 'version'))
 
@@ -125,7 +125,7 @@ def stage_owl_and_get_url(request):
 @pytest.fixture
 def get_new_ontology_helper(tmp_path):
     def _get_new_ontology_helper():
-        return OntologyHelper(user_data_dir=tmp_path.resolve())
+        return OntologyHelper(config=Config(user_data_dir=tmp_path.resolve()))
 
     return _get_new_ontology_helper
 
