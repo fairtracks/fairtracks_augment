@@ -6,15 +6,11 @@ from fairtracks_augment.common import ArgBasedSingleton
 DEFAULT_USERDATA_DIR = os.path.join(Path.home(), '.fairtracks_augment')
 FILECACHE_DIR = 'file_cache'
 ONTOLOGY_DIR = 'ontologies'
+METADATA_FILE = 'metadata.yaml'
 ONTOLOGY_METADATA_FILE = 'ontologies.yaml'
 
 
-def ensure_dir_exists(dir_path):
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
-
-
-class Config(metaclass=ArgBasedSingleton):
+class Config(metaclass=ArgBasedSingletonMeta):
     def __init__(self, user_data_dir=DEFAULT_USERDATA_DIR):
         self.filecache_dir_path = os.path.join(user_data_dir, FILECACHE_DIR)
         self.ontology_dir_path = os.path.join(user_data_dir, ONTOLOGY_DIR)

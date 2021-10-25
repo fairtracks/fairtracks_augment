@@ -1,3 +1,4 @@
+import os
 from collections.abc import Iterable
 from copy import copy
 
@@ -10,6 +11,11 @@ from cachecontrol import CacheControl, CacheControlAdapter
 from cachecontrol.caches import FileCache
 
 from fairtracks_augment.constants import NUM_DOWNLOAD_RETRIES, BACKOFF_FACTOR, REQUEST_TIMEOUT
+
+
+def ensure_dir_exists(dir_path):
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
 
 
 def get_paths_to_element(el_name, url=None, data=None, path=[], schemas={}):
@@ -85,11 +91,11 @@ def http_get_request(filecache_dir_path, url, callback_if_ok, require_etag=False
         raise
 
 
-class ArgBasedSingleton(type):
+class ArgBasedSingletonMeta(type):
     _instances = dict()
 
     def __call__(cls, **kwargs):
         args_as_tuple = tuple(kwargs.items())
         if args_as_tuple not in cls._instances:
-            cls._instances[args_as_tuple] = super(ArgBasedSingleton, cls).__call__(**kwargs)
+            cls._instances[args_as_tuple] = super(ArgBasedSingletonMeta, cls).__call__(**kwargs)
         return cls._instances[args_as_tuple]
