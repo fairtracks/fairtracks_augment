@@ -1,0 +1,59 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/current/json/schema/fairtracks_contact.schema.json",
+    "$version_url": "https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/1.0.2/json/schema/fairtracks_contact.schema.json",
+    "$comment": "JSON signature: a924577aa4346db45ec899bce65fec7e61eb7fd069485779178e88e90464e03c",
+    "title": "Contact",
+    "type": "object",
+    "properties": {
+        "@schema": {
+            "title": "Schema URL",
+            "description": "The absolute URL of the 'current' version of the relevant FAIRtracks JSON schema within the same major version as the JSON document follows (which should ensure compatibility). Must match the value of '$id' in the linked schema",
+            "type": "string",
+            "format": "uri",
+            "pattern": "^(https?|ftp)://",
+            "const": "https://raw.githubusercontent.com/fairtracks/fairtracks_standard/v1/current/json/schema/fairtracks_contact.schema.json"
+        },
+        "name": {
+            "title": "Name",
+            "description": "Name of contact person/organization",
+            "type": "string",
+            "examples": [
+                "ENCODE DCC"
+            ]
+        },
+        "e-mail": {
+            "title": "E-mail",
+            "description": "E-mail to contact person/organization",
+            "type": "string",
+            "format": "idn-email",
+            "examples": [
+                "encode-help@lists.stanford.edu"
+            ]
+        },
+        "orcid": {
+            "title": "ORCID",
+            "description": "ORCID to contact person",
+            "type": "string",
+            "format": "curie",
+            "namespace": "orcid",
+            "matchType": "canonical"
+        }
+    },
+    "required": [
+        "name"
+    ],
+    "anyOf": [
+        {
+            "required": [
+                "e-mail"
+            ]
+        },
+        {
+            "required": [
+                "orcid"
+            ]
+        }
+    ],
+    "additionalProperties": true
+}
