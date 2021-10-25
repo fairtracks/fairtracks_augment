@@ -61,18 +61,19 @@ class LocalCache(metaclass=ArgBasedSingletonMeta):
 
     def install_or_update_file(self, url):
         if url not in self._file_metadata_dict:
-            self.install_file(url)
+            self.install_file_from_url(url)
         else:
             self.update_file(url)
 
-    def install_file(self, url):
+    def _common_pre_install_setup(self, url):
         self._assert_file_not_installed(url)
-
         self._register_file_metadata(url)
 
-        print('downloading: ' + url)
-        self._download_file(url)
-        print('downloaded: ' + url)
+    def _common_install_file(self, url, download=True):
+        if download:
+            print('downloading: ' + url)
+            self._download_file(url)
+            print('downloaded: ' + url)
 
         print('installing: ' + url)
         self._install_data_from_file(url)
@@ -80,6 +81,15 @@ class LocalCache(metaclass=ArgBasedSingletonMeta):
 
         self._update_metadata_from_file(url)
         print('updated metadata: ' + url)
+
+    def install_file_from_url(self, url):
+        self._common_pre_install_setup(url)
+        self._common_install_file(url, download=True)
+
+    def install_file_from_path(self, url, path):
+        self._common_pre_install_setup(url)
+        shutil.copy(path, self._get_file_path(url))
+        self._common_install_file(url, download=False)
 
     def _assert_file_not_installed(self, url):
         assert url not in self._file_metadata_dict
@@ -98,7 +108,7 @@ class LocalCache(metaclass=ArgBasedSingletonMeta):
 
         if self._does_file_need_update(url):
             self.delete_file(url)
-            self.install_file(url)
+            self.install_file_from_url(url)
             return True
         else:
             return False

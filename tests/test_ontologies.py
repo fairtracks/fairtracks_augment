@@ -64,8 +64,8 @@ def install_old_owl_files(stage_owl_file_and_get_url, get_new_ontology_helper):
         omo_id_old = FileId('omo.owl', 'old')
         hom_id_old = FileId('hom.owl', 'old')
 
-        ontology_helper.install_file(stage_owl_file_and_get_url(omo_id_old))
-        ontology_helper.install_file(stage_owl_file_and_get_url(hom_id_old))
+        ontology_helper.install_file_from_url(stage_owl_file_and_get_url(omo_id_old))
+        ontology_helper.install_file_from_url(stage_owl_file_and_get_url(hom_id_old))
         ontology_helper.store()
 
         return [omo_id_old, hom_id_old]

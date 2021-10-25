@@ -12,7 +12,7 @@ from http import HTTPStatus
 from fairtracks_augment.common import ensure_dir_exists
 from fairtracks_augment.config import Config
 from fairtracks_augment.localcache import LocalCache
-from tests.common import FileId, TestFileCache, stage_file_and_get_url
+from tests.common import FileId, TestFileCache, get_test_dir, stage_file_and_get_url
 
 
 @pytest.fixture
@@ -56,11 +56,12 @@ def _assert_metadata_for_file_id(cache, file_id):
            TEXT_METADATA_FOR_ASSERTS[file_id].etag
 
 
-def _assert_data_and_metadata_for_all_file_ids(cache, file_id_list):
+def _assert_data_and_metadata_for_all_file_ids(cache, file_id_list, ignore_metadata=False):
     assert cache.all_file_urls() == _get_all_mock_urls(file_id_list)
     for file_id in file_id_list:
         _assert_data_for_file_id(cache, file_id)
-        _assert_metadata_for_file_id(cache, file_id)
+        if not ignore_metadata:
+            _assert_metadata_for_file_id(cache, file_id)
 
 
 def _get_testdata_path(test_dir, id):
@@ -90,8 +91,8 @@ def install_old_files(stage_text_file_and_get_url, get_new_localcache):
         first_id_old = FileId('to_be_or_not_to_be.txt', 'old')
         second_id_old = FileId('all_the_worlds_a_stage.txt', 'old')
 
-        file_cache.install_file(stage_text_file_and_get_url(first_id_old))
-        file_cache.install_file(stage_text_file_and_get_url(second_id_old))
+        file_cache.install_file_from_url(stage_text_file_and_get_url(first_id_old))
+        file_cache.install_file_from_url(stage_text_file_and_get_url(second_id_old))
         file_cache.store()
 
         return [first_id_old, second_id_old]
@@ -100,19 +101,22 @@ def install_old_files(stage_text_file_and_get_url, get_new_localcache):
 
 
 @httpretty.activate
-def test_install_file(stage_text_file_and_get_url, get_new_localcache, tmp_path):
+def test_install_file(stage_text_file_and_get_url, get_new_localcache, tmp_path, get_test_dir):
     cache = get_new_localcache()
 
     assert list(cache.all_file_urls()) == []
     assert os.path.exists(os.path.join(tmp_path.resolve(), 'data'))
 
     first_id_old = FileId('to_be_or_not_to_be.txt', 'old')
-    cache.install_file(stage_text_file_and_get_url(first_id_old))
+    cache.install_file_from_url(stage_text_file_and_get_url(first_id_old))
     _assert_data_and_metadata_for_all_file_ids(cache, [first_id_old])
 
     second_id_old = FileId('all_the_worlds_a_stage.txt', 'old')
-    cache.install_file(stage_text_file_and_get_url(second_id_old))
-    _assert_data_and_metadata_for_all_file_ids(cache, [first_id_old, second_id_old])
+    url = _get_mock_url(second_id_old)
+    file_path = _get_testdata_path(get_test_dir(), second_id_old)
+    cache.install_file_from_path(url, file_path)
+    _assert_data_and_metadata_for_all_file_ids(cache, [first_id_old, second_id_old],
+                                               ignore_metadata=True)
 
 
 @httpretty.activate
@@ -180,7 +184,7 @@ def test_install_retries(get_new_localcache, stage_text_file_and_get_url):
     cache = get_new_localcache()
     first_id_old = FileId('to_be_or_not_to_be.txt', 'old')
     omo_old_url = stage_text_file_and_get_url(first_id_old, respond_status=HTTPStatus.TOO_MANY_REQUESTS)
-    cache.install_file(omo_old_url)
+    cache.install_file_from_url(omo_old_url)
 
 
 @httpretty.activate
@@ -188,7 +192,7 @@ def test_cached_update(get_new_localcache, stage_text_file_and_get_url):
     cache = get_new_localcache()
     first_id_old = FileId('to_be_or_not_to_be.txt', 'old')
     omo_old_url = stage_text_file_and_get_url(first_id_old, max_age=1, respond_status=HTTPStatus.OK)
-    cache.install_file(omo_old_url)
+    cache.install_file_from_url(omo_old_url)
 
     #
     # Test that cache is being used, assuming the new request is within the max_age range (1 sec)

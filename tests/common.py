@@ -68,6 +68,14 @@ def register_mock_uri(max_age, uri, contents, respond_status, etag=None):
 
 
 @pytest.fixture
+def get_test_dir(request):
+    def _get_test_dir():
+        return Path(request.module.__file__).parent
+
+    return _get_test_dir
+
+
+@pytest.fixture
 def stage_file_and_get_url(request):
 
     def _stage_file_and_get_url(file_id, file_cache=None, get_mock_url_func=None,

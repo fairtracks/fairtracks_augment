@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from fairtracks_augment.common import ArgBasedSingleton
+from fairtracks_augment.common import ArgBasedSingletonMeta, ensure_dir_exists
 
 DEFAULT_USERDATA_DIR = os.path.join(Path.home(), '.fairtracks_augment')
 FILECACHE_DIR = 'file_cache'
