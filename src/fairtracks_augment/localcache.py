@@ -20,8 +20,8 @@ class FileMetadata(YAMLObject):
 
     @classmethod
     def create_from_url(cls, file_dir_path, url):
-        owl_file_name = os.path.basename(urlparse(url).path)
-        return cls(file_dir_path, owl_file_name)
+        file_name = os.path.basename(urlparse(url).path)
+        return cls(file_dir_path, file_name)
 
     def get_file_path(self):
         return os.path.join(self._file_dir_path, self._filename)

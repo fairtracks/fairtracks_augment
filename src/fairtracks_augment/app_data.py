@@ -12,7 +12,7 @@ from fairtracks_augment.ontologies import OntologyHelper
 
 
 class AppData:
-    def __init__(self, data=None, tmp_dir=None):
+    def __init__(self, data=None, schemas=None):
         print("initializing ontologies...")
 
         self.config = Config()
@@ -23,14 +23,7 @@ class AppData:
             data = NestedOrderedDict()
             data["@schema"] = self._get_current_schema_url()
 
-        if tmp_dir:
-            schemas = {}
-            for filename in os.listdir(tmp_dir):
-                if filename.endswith(".json"):
-                    with open(os.path.join(tmp_dir, filename)) as schema_file:
-                        schema = json.load(schema_file)
-                        schemas[filename] = schema
-
+        if schemas:
             paths_to_element = get_paths_to_element(TERM_ID, data=schemas[TOP_SCHEMA_FN],
                                                     schemas=schemas)
         else:

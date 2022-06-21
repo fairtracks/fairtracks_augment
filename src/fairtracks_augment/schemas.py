@@ -1,10 +1,25 @@
 import functools
 import json
 import os
+from urllib.parse import urlparse, quote
+
 import owlready2
 
 from fairtracks_augment.constants import EDAM_ONTOLOGY, DOAP_VERSION, VERSION_IRI
-from fairtracks_augment.localcache import LocalCache
+from fairtracks_augment.localcache import LocalCache, FileMetadata
+
+
+class SchemasMetadata(FileMetadata):
+    yaml_tag = '!SchemasMetadata'
+
+    @classmethod
+    def create_from_url(cls, file_dir_path, url):
+        # url_path = urlparse(url).path
+        file_name = quote(url, safe='')
+        return cls(file_dir_path, file_name)
+
+    def get_file_path(self):
+        return os.path.join(self._file_dir_path, self._filename)
 
 
 class SchemaHelper(LocalCache):
@@ -13,8 +28,8 @@ class SchemaHelper(LocalCache):
         super().__init__(filecache_dir_path=config.filecache_dir_path,
                          data_dir_path=config.schema_dir_path)
 
-    # def _get_metadata_cls(cls):
-    #     return FileMetadata
+    def _get_metadata_cls(cls):
+        return SchemasMetadata
 
     def _load_data_from_stored(self):
         for url in self._file_metadata_dict.keys():

@@ -52,35 +52,47 @@ def assert_helper_info_for_schema_id(helper, schema_id):
            _get_schema_version_url(schema_id)
 
 
-def assert_helper_info_for_all_schema_ids(helper, schema_id_list):
+def assert_metadata_for_all_schema_ids(helper, schema_id_list):
     assert helper.all_file_urls() == _get_all_schema_mock_urls(schema_id_list)
     for schema_id in schema_id_list:
         assert_helper_info_for_schema_id(helper, schema_id)
 
 
 @pytest.fixture
-def add_schema_files_and_get_version_urls(get_test_dir, stage_schema_file_and_get_url,
-                                          get_new_schema_helper):
-    def _add_schema_files_and_get_version_urls(version, from_url):
-        helper = get_new_schema_helper()
+def get_all_schema_file_ids(get_test_dir):
+    def _get_all_schema_file_ids(version):
         all_schemas_path = _get_schema_testdata_path(get_test_dir(), FileId("*", version))
-        schema_version_urls = []
 
-        for filename in glob.glob(all_schemas_path):
-            schema_path = os.path.join(all_schemas_path, filename)
-            file_id = FileId(schema_path, version)
-            schema_version_urls.append(_get_schema_version_url(file_id))
+        file_ids = []
+        for schema_path in glob.glob(all_schemas_path):
+            filename = os.path.basename(schema_path)
+            file_ids.append(FileId(filename, version))
+        return file_ids
 
-            if from_url:
-                schema_mock_url = stage_schema_file_and_get_url(file_id)
-                helper.install_file_from_url(schema_mock_url)
-            else:
-                schema_mock_url = _get_schema_mock_url(file_id)
-                helper.install_file_from_path(schema_mock_url, schema_path)
+    return _get_all_schema_file_ids
 
-        return schema_version_urls
 
-    return _add_schema_files_and_get_version_urls
+@pytest.fixture
+def add_schema_files_from_url(get_new_schema_helper, stage_schema_file_and_get_url):
+    def _add_schema_files_from_url(file_ids):
+        helper = get_new_schema_helper()
+        for file_id in file_ids:
+            schema_mock_url = stage_schema_file_and_get_url(file_id)
+            helper.install_file_from_url(schema_mock_url)
+
+    return _add_schema_files_from_url
+
+
+@pytest.fixture
+def add_schema_files_from_file(get_new_schema_helper, get_test_dir):
+    def _add_schema_files_from_file(file_ids):
+        helper = get_new_schema_helper()
+        for file_id in file_ids:
+            schema_mock_url = _get_schema_mock_url(file_id)
+            schema_path = _get_schema_testdata_path(get_test_dir(), file_id)
+            helper.install_file_from_path(schema_mock_url, schema_path)
+
+    return _add_schema_files_from_file
 
 
 def _test_add_schemas(add_schema_files_and_get_version_urls, get_new_schema_helper,
@@ -93,14 +105,23 @@ def _test_add_schemas(add_schema_files_and_get_version_urls, get_new_schema_help
     add_schema_files_and_get_version_urls('v1.0.2', from_url=from_url)
     schemas_path = _get_schema_testdata_path(get_test_dir(), FileId("*", 'v1.0.2'))
     all_schemas_ids = (FileId(_, 'v1.0.2') for _ in glob.glob(schemas_path))
-    assert_helper_info_for_all_schema_ids(helper, all_schemas_ids)
+    assert_metadata_for_all_schema_ids(helper, all_schemas_ids)
 
 
 @httpretty.activate
-def test_add_schemas_from_url(add_schema_files_and_get_version_urls, get_new_schema_helper,
+def test_add_schemas_from_url(get_new_schema_helper,
+                              get_all_schema_file_ids,
+                              stage_schema_file_and_get_url,
+                              add_schema_files_from_url,
                               tmp_path, get_test_dir):
-    _test_add_schemas(add_schema_files_and_get_version_urls, get_new_schema_helper,
-                      tmp_path, get_test_dir, from_url=True)
+    helper = get_new_schema_helper()
+
+    assert list(helper.all_file_urls()) == []
+    assert os.path.exists(os.path.join(tmp_path.resolve(), SCHEMA_DIR))
+
+    all_schemas_ids = get_all_schema_file_ids('v1.0.2')
+    add_schema_files_from_url(all_schemas_ids)
+    assert_metadata_for_all_schema_ids(helper, all_schemas_ids)
 
 
 @httpretty.activate

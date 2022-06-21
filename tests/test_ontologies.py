@@ -19,21 +19,21 @@ def get_new_ontology_helper(tmp_path):
     return _get_new_ontology_helper
 
 
-OwlInfo = namedtuple('OwlInfo', ('version_iri', 'etag'))
+OwlMetadata = namedtuple('OwlMetadata', ('version_iri', 'etag'))
 
 OWL_METADATA_FOR_ASSERTS = {
     FileId('omo.owl', 'old'):
-        OwlInfo('http://purl.obolibrary.org/obo/omo/2020-05-08/omo.owl',
-                '594585592bd65f374afdd8cafec151fa'),
+        OwlMetadata('http://purl.obolibrary.org/obo/omo/2020-05-08/omo.owl',
+                    '594585592bd65f374afdd8cafec151fa'),
     FileId('omo.owl', 'new'):
-        OwlInfo('http://purl.obolibrary.org/obo/omo/2020-06-08/omo.owl',
-                'a136b8434c8ca8b6deca03529b6f3a58'),
+        OwlMetadata('http://purl.obolibrary.org/obo/omo/2020-06-08/omo.owl',
+                    'a136b8434c8ca8b6deca03529b6f3a58'),
     FileId('omo.owl', 'maybe_newer'):
-        OwlInfo('http://purl.obolibrary.org/obo/omo/2020-06-08/omo.owl',
-                'a136b8434c8ca8b6deca03529b6f3a58'),
+        OwlMetadata('http://purl.obolibrary.org/obo/omo/2020-06-08/omo.owl',
+                    'a136b8434c8ca8b6deca03529b6f3a58'),
     FileId('hom.owl', 'old'):
-        OwlInfo('http://purl.obolibrary.org/obo/hom/releases/2015-01-07/hom.owl',
-                'd3f7a3aabf82ce1f5cfc2112875eeba9')
+        OwlMetadata('http://purl.obolibrary.org/obo/hom/releases/2015-01-07/hom.owl',
+                    'd3f7a3aabf82ce1f5cfc2112875eeba9')
 }
 
 

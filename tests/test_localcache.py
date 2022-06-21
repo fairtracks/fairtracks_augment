@@ -27,21 +27,21 @@ def get_new_localcache(tmp_path):
     return _get_new_localcache
 
 
-TextInfo = namedtuple('TextInfo', ('first_line', 'etag'))
+TextMetadata = namedtuple('TextMetadata', ('first_line', 'etag'))
 
 TEXT_METADATA_FOR_ASSERTS = {
     FileId('to_be_or_not_to_be.txt', 'old'):
-        TextInfo("To be, or not to be, that is the question,",
-                 'fe08f05b578985c90e68bf6ebaa206ee'),
+        TextMetadata("To be, or not to be, that is the question,",
+                     'fe08f05b578985c90e68bf6ebaa206ee'),
     FileId('to_be_or_not_to_be.txt', 'new'):
-        TextInfo("To be, or not to be, that is the Question:",
-                 '554c7e6f12e10467828ec24adc6f4373'),
+        TextMetadata("To be, or not to be, that is the Question:",
+                     '554c7e6f12e10467828ec24adc6f4373'),
     FileId('to_be_or_not_to_be.txt', 'maybe_newer'):
-        TextInfo("To be, or not to be, that is the Question:",
-                 '554c7e6f12e10467828ec24adc6f4373'),
+        TextMetadata("To be, or not to be, that is the Question:",
+                     '554c7e6f12e10467828ec24adc6f4373'),
     FileId('all_the_worlds_a_stage.txt', 'old'):
-        TextInfo("All the world's a stage,",
-                 '584a0dfc09fbb9077acd42fce61cf74e')
+        TextMetadata("All the world's a stage,",
+                     '584a0dfc09fbb9077acd42fce61cf74e')
 }
 
 

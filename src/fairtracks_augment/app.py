@@ -38,6 +38,8 @@ def augment():
     if 'data' not in request.files:
         abort(400, 'Parameter called data containing FAIRtracks JSON data is required')
     data_json = request.files['data']
+    if 'schemas' in request.files:
+        schemas_zip_file = request.files['schemas']
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         data_fn = ''
@@ -56,7 +58,17 @@ def augment():
             with zipfile.ZipFile(os.path.join(tmp_dir, filename), 'r') as archive:
                 archive.extractall(tmp_dir)
 
-            app_data = AppData(data, tmp_dir)
+            if tmp_dir:
+                schemas = {}
+                for filename in os.listdir(tmp_dir):
+                    if filename.endswith(".json"):
+                        with open(os.path.join(tmp_dir, filename)) as schema_file:
+                            schema = json.load(schema_file)
+                            # TODO: use full URLs instead of filename. Check that URLs match
+                            # with schema id. Create schema caching class, similar to ontologies.
+                            schemas[filename] = schema
+
+            app_data = AppData(data, schemas)
         else:
             app_data = AppData(data)
 
