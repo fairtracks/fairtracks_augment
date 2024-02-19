@@ -6,6 +6,8 @@ import pytest
 
 from collections import namedtuple
 
+from owlready2 import locstr
+
 from fairtracks_augment.config import Config, ONTOLOGY_DIR
 from fairtracks_augment.ontologies import OntologyHelper
 from tests.common import FileId, TestFileCache, stage_file_and_get_url
@@ -85,11 +87,11 @@ def test_search_ontology(install_old_owl_files, get_new_ontology_helper, stage_o
 
     omo_term_id = "http://purl.obolibrary.org/obo/IAO_0000111"
     term_label = helper.search_ontologies_for_term_id(all_old_urls, omo_term_id)
-    assert term_label == "editor preferred term"
+    assert term_label == locstr("editor preferred term", "en")
 
     helper.update_file(stage_owl_file_and_get_url(FileId('omo.owl', 'new')))
     term_label = helper.search_all_ontologies_for_term_id(omo_term_id)
-    assert term_label == "what I like to call it"
+    assert term_label == locstr("what I like to call it", "en")
 
 
 @httpretty.activate

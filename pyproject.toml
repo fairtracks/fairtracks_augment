@@ -15,20 +15,22 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.6"
-pyyaml = "^5.3.1"
-cython = "^0.29.21"
-flask = "^1.1.2"
-requests = "^2.24.0"
-Owlready2 = "^0.24"
-CacheControl = {version = "^0.12.6", extras = ["filecache"]}
+python = ">=3.8,<4.0"
+pyyaml = "^6.0.1"
+cython = "^3.0.8"
+flask = "^3.0.1"
+requests = "^2.31.0"
+Owlready2 = "^0.45"
+CacheControl = {version = "^0.13.1", extras = ["filecache"]}
 
-[tool.poetry.dev-dependencies]
-pytest = "^6.0.2"
-httpretty = "^1.0.2"
 
 [tool.poetry.urls]
 issues = "https://github.com/fairtracks/fairtracks_augment/issues"
+
+[tool.poetry.group.dev.dependencies]
+httpretty = "^1.1.4"
+pytest = "^7.4.4"
+pytest-pycharm = "^0.7.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
